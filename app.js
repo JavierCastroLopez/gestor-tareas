@@ -825,7 +825,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Registrar Service Worker al activar notificaciones
     if ('serviceWorker' in navigator) {
       try {
-        swRegistration = await navigator.serviceWorker.register('/sw.js');
+        const swUrl = new URL('./sw.js', document.baseURI).href;
+        swRegistration = await navigator.serviceWorker.register(swUrl);
         console.log('SW registrado:', swRegistration.scope);
       } catch (e) {
         console.error('Error registrando SW:', e);

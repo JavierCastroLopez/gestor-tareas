@@ -56,8 +56,8 @@ async function checkAndNotifyTasks() {
 async function showLocalNotification(task) {
   const options = {
     body: task.description ? task.description : 'Tarea pendiente',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/badge-72.png',
+    icon: './icons/icon-192.png',
+    badge: './icons/badge-72.png',
     vibrate: [200, 100, 200],
     tag: `task-${task.id}`,
     renotify: true,
@@ -68,8 +68,8 @@ async function showLocalNotification(task) {
       timestamp: Date.now()
     },
     actions: [
-      { action: 'open', title: 'Abrir', icon: '/icons/icon-192.png' },
-      { action: 'close', title: 'Cerrar', icon: '/icons/icon-192.png' }
+      { action: 'open', title: 'Abrir', icon: './icons/icon-192.png' },
+      { action: 'close', title: 'Cerrar', icon: './icons/icon-192.png' }
     ]
   };
 
@@ -239,8 +239,8 @@ self.addEventListener('push', (event) => {
   console.log('[SW] Push externo recibido');
   const options = {
     body: 'Tienes una nueva notificación',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/badge-72.png',
+    icon: './icons/icon-192.png',
+    badge: './icons/badge-72.png',
     vibrate: [200, 100, 200],
     tag: 'external-push',
     renotify: true,
