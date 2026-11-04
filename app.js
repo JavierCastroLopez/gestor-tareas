@@ -36,8 +36,8 @@ function setupEventListeners() {
 
 function setupKeyboardShortcuts() {
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeTaskModal();
-    if (e.key === 'n' && !e.shiftKey) {
+    if (e.key === 'Escape' || e.key === 'esc') closeTaskModal();
+    if (e.key.toLowerCase() === 'n') {
       e.preventDefault();
       openTaskModal();
     }
@@ -99,12 +99,13 @@ function handleTaskSubmit(e) {
   const description = document.getElementById('taskDescription').value.trim();
   const dueDate = document.getElementById('taskDueDate').value;
   const priority = document.querySelector('.priority-tag.active')?.dataset.value || 'media';
-  const tagInputs = document.getElementById('newTag').value.trim().split(',').map(t => t.trim()).filter(t => t);
-  const newTag = document.getElementById('newTag').value.trim();
+  const tagInputValue = document.getElementById('newTag').value.trim();
+  const tagInputs = tagInputValue.split(',').map(t => t.trim()).filter(t => t);
+  const newTag = tagInputValue ? tagInputValue : '';
 
   if (!title) return;
 
-  const tags = [...new Set([...(tagsCache || []), ...tagInputs, newTag].filter(t => t))];
+  const allTags = [...new Set([...(tagsCache || []), ...tagInputs, newTag].filter(t => t))];
 
   const task = {
     id: Date.now().toString() + Math.random().toString(36).substr(2),
@@ -112,7 +113,7 @@ function handleTaskSubmit(e) {
     description,
     dueDate: dueDate || null,
     priority,
-    tags,
+    tags: allTags,
     completed: false,
     createdAt: new Date().toISOString()
   };
@@ -130,6 +131,10 @@ function handleTaskSubmit(e) {
   renderTasks();
   renderFilters();
   loadTagsFromTasks();
+  
+  // Clear tag input after submitting
+  document.getElementById('newTag').value = '';
+  
   closeTaskModal();
 }
 
@@ -149,9 +154,6 @@ function renderCalendar() {
   const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0).getDate();
   const prevStart = (startingDay - 1 + 7) % 7;
 
-  // Current month days
-  let dayCount = 1;
-
   // Fill all days of the grid (6 weeks * 7 days = 42 cells)
   for (let i = 0; i < 42; i++) {
     const dayCell = document.createElement('div');
@@ -163,7 +165,8 @@ function renderCalendar() {
 
     if (dayOfMonth >= 1 && dayOfMonth <= totalDays && month === today.getMonth()) {
       dayCell.textContent = dayOfMonth;
-      dayCell.classList.add('has-task');
+      dayCell.classList.add('day-cell');
+      dayCell.setAttribute('data-day', dayOfMonth);
 
       // Find tasks for this day
       const tasksForDay = tasks.filter(t => {
@@ -174,16 +177,17 @@ function renderCalendar() {
 
       if (tasksForDay.length > 0) {
         dayCell.classList.add('has-task');
-        const taskCount = tasksForDay.filter(t => !t.completed).length;
-        if (taskCount > 0) {
+        const pendingTasks = tasksForDay.filter(t => !t.completed).length;
+        if (pendingTasks > 0) {
           const badge = document.createElement('span');
-          badge.className = 'task-pill priority-' + task[0].priority;
-          badge.textContent = `${taskCount} pend`;
+          const firstTaskPriority = tasksForDay[0] ? tasksForDay[0].priority : 'baja';
+          badge.className = 'task-pill priority-' + firstTaskPriority;
+          badge.textContent = `${pendingTasks} pend`;
           dayCell.appendChild(badge);
         }
       }
     } else if (dayOfMonth < 1 || month !== today.getMonth()) {
-      dayCell.textContent = dayOfMonth || prevMonth - (prevStart - i + prevMonth) + 1;
+      dayCell.textContent = '';
       dayCell.classList.add('empty');
     }
 
@@ -331,6 +335,11 @@ function renderFilters() {
     option.textContent = tag;
     tagFilter.appendChild(option);
   });
+  
+  // Si hay tareas, seleccionar "Todas" como default, si no ocultar el filtro
+  if (tasks.length > 0) {
+    tagFilter.value = 'all';
+  }
 }
 
 function toggleTaskCompletion(taskId) {
