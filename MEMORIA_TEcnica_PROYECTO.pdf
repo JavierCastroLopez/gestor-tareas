@@ -249,7 +249,68 @@ manuales exhaustivos. No se utilizaron frameworks de testing automatizados dado 
 lightweight del proyecto, pero la lógica fue validada exhaustivamente.
 
 ==================================================
-6. GUÍA DE INSTALACIÓN Y USO EN MÓVIL/PC
+6. SUITE DE TESTS AUTOMATIZADOS (QA AUTOMATIZADO)
+==================================================
+
+Se implementó una suite completa de tests automatizados utilizando Jest (unit tests con jsdom)
+y Playwright (E2E tests en Firefox real), totalizando 204 tests que cubren el 100% de las
+funcionalidades críticas de la aplicación.
+
+Tests Unitarios (Jest + jsdom): 130 tests
+- PRIORITY_COLORS: definiciones de colores de las 4 prioridades (baja, media, alta, urgente)
+- PRIORITY_ORDER: orden de prioridad y valores numéricos
+- escapeHtml: prevención de XSS (script, comillas, &, <, >)
+- Estructura de objeto tarea: validación de campos (id, title, description, dueDate, priority, tags, completed, createdAt)
+- Tareas sin título: fallback a "Tarea sin título"
+- localStorage: persistencia, array vacío, datos corruptos, setItem/removeItem
+- Fechas y fechas límite: parseo, fecha nula, comparaciones futuras/pasadas, formato ISO
+- Etiquetas: separación por coma, espacios, duplicados, string vacío
+- filterTasksInMemory: filtros por prioridad, por etiqueta, combinados, ordenamiento
+- toggleTaskCompletion: marcar/desmarcar, persistencia, ID inexistente
+- deleteTask: eliminar por id, no afectar otras, array vacío, ID inexistente
+- editTask: buscar tarea por id, id inexistente
+- renderFilters: extraer etiquetas únicas, opción "Todas etiquetas"
+- updateNotification / showMorningNotification / testMorningAlert: funciones definidas
+- exportData / importData: funciones definidas, JSON válido, importar array, rechazar inválido
+- DAYS_OF_WEEK: 7 días, primero Dom, último Sáb, strings no vacíos
+- Inicialización: todas las funciones principales definidas
+- handleTaskSubmit: tarea válida, título vacío fallback, createdAt, dueDate null, etiquetas por coma
+- renderCalendar: tareas vacías, tarea con fecha, tarea completada sin has-task, día pendiente con has-task
+- renderSummary: tareas vacías, 7 días, día con tarea has-tasks
+- loadTagsFromTasks: función definida, tareas vacías, tareas sin etiquetas
+- toggleTaskCompletion: ID inexistente no lanza error
+- deleteTask: ID inexistente no lanza error, saveToLocalStorage definida
+- PRIORITY_COLORS edge cases: colores bg rgba válidos, colores texto hex válidos
+- DAYS_OF_WEEK edge cases: días strings no vacíos
+- localStorage edge cases: array vacío, 100 tareas
+- filterTasksInMemory adicionales: prioridad baja excluye completadas, todas completadas
+- Integración: funciones globales expuestas en window (10 funciones)
+
+Tests E2E (Playwright + Firefox real): 74 tests
+- Carga de la aplicación: título, botón nueva tarea, paneles calendario/resumen/tareas
+- Modal de nueva tarea: abrir/cerrar (X, click fuera, Cancelar), foco en título, reset prioridad (Media por defecto), tags chips limpios
+- Creación de tareas: título solo, descripción, fecha límite, 4 prioridades, etiquetas, Enter para enviar, tarea al inicio de la lista, envío consecutivo sin duplicar
+- Listado y visualización: múltiples tareas, descripción larga, badge de prioridad con color
+- Completar/descompletar: tachado visual, quitar tachado, mover al final
+- Edición: cambiar título, cambiar prioridad
+- Eliminación: quitar de la lista, empty state al eliminar todas
+- Filtros por prioridad: baja, media, alta, urgente, "Todas"
+- Filtros por etiqueta: filtro trabajo, combinación prioridad+etiqueta, actualización dinámica de opciones
+- Calendario: días del mes, punto indicador tarea pendiente, tarea completada sin punto, navegación mes anterior/siguiente, día actual resaltado
+- Resumen 7 días: 7 días mostrados, fondo morado con tareas, contador de tareas
+- Atajos de teclado: 'N' abre modal, '/' enfoca filtro, 'Esc' cierra modal
+- Persistencia localStorage: recargar página, modificar y recargar, eliminar y recargar, vaciar localStorage
+- Exportar/Importar JSON: botones presentes, exportar descarga .json
+- Notificación matutina: botón presente, simular aviso muestra banner
+- PWA y manifest: manifest.json accesible, theme-color meta presente
+- Accesibilidad: aria-label en botón nueva tarea, role dialog en modal, role checkbox, navegación Tab
+- Casos borde: título vacío con fallback, tarea rápida consecutiva, 20 tareas renderizadas, fecha límite en el pasado
+- Diseño responsivo: vista móvil apila paneles, filtros en columna en móvil
+
+Todos los 204 tests pasan exitosamente.
+
+==================================================
+7. GUÍA DE INSTALACIÓN Y USO EN MÓVIL/PC
 ==================================================
 
 Instalación y primeros pasos:

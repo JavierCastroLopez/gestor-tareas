@@ -161,10 +161,11 @@ function openTaskModal(taskId = null) {
     // Modo nueva tarea (solo si no estamos editando una tarea existente)
     title.textContent = 'Nueva tarea';
 
-    // Reset priority tags with forced baja
+    // Reset priority tags with forced Media (default per spec)
     if (priorityTags.length > 0) {
       priorityTags.forEach(tag => tag.classList.remove('active'));
-      if (priorityTags[0]) priorityTags[0].classList.add('active');  // Forzar "Baja"
+      const mediaTag = document.querySelector('.priority-tag[data-value="media"]');
+      if (mediaTag) mediaTag.classList.add('active');
     }
 
     // Clear tags completely
@@ -543,6 +544,9 @@ function updateNotification() {
     showMorningNotification();
   }
 }
+
+// Chequeo de notificación matutina cada minuto
+setInterval(updateNotification, 60000);
 
 function showMorningNotification() {
   const banner = document.getElementById('notificationBanner');
