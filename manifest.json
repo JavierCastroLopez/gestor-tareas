@@ -1,18 +1,24 @@
 {
   "name": "Calendario & Gestor de Tareas",
   "short_name": "TaskCal",
-  "description": "Aplicación integrada de calendario y gestor de tareas con modo oscuro",
+  "description": "Aplicación integrada de calendario y gestor de tareas con modo oscuro y notificaciones push",
   "start_url": ".",
   "display": "standalone",
   "theme_color": "#9933FF",
-  "background_color": "#121212",
+  "background_color": "#0f0f12",
   "orientation": "portrait-primary",
   "display_override": ["standalone", "window-controls-overlay"],
   "icons": [
     {
-      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxMiAxNiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0yOCVkIiBoZWlnaHQ9IjYwJCIgZmlsbD0idXNlcnZlci1tb2RlIiBmaWxsPSJub25lIiBmaWxsPSJ9IiBmaWxsPSJ9Ij4KICAgIDx0ZXh0IHg9IjUuNSIgeT0iLTkuNiIgZm9udC1mYW1pbHk9IkFyaWFsLCBkaXNwLXNlc2l6ZSIgZm9udC13ZWlnaHQ9IkFyaWFsIiB0ZXh0LWFuY2hvcj0bcndwLXNwYWNlIj5JbkJ1aWxkDQoKICAgICAgICA8dGV4dCB4PSI1LjUgMSIgLz4KICAgICAgICA8dGV4dCB4PSI3LjUiIHk9IjUuNSIgZm9udC1mYW1pbHk9IkFyaWFsLCBkaXNwLXNlc2l6ZSIgZm9udC13ZWlnaHQ9IkFyaWFsIiB0ZXh0LWFuY2hvcj0bcndwLXNwYWNlIj5JbkJ1aWxkDQoKICAgICAgICAgICA8dGV4dCB4PSIxMiI+Q2hhbmdlPHN0eWxlIHg9IjEuNSIsIHk9IjEuNSIsIGZvbnQtZmFtaWx5PSJBcmlhbCwgZGlycC1zZXNpemUiIHRleHQtYW5jaG9yPSJ3eXAvc3BhY2UiPkJpYWthdCBDaGVja3N1bSA8L3N0eWxlPiB9CiAgICAgICAgICAgICJjbHVxdWFkIiArPSBjbHVxdWFkIHN0eWxlcz0ie2ZvbnQtYmFtaWx5OiBhcmlhbCwgZGlycC1zZXNpemU6INCgICAgICAgICAgICAgICAgICAgIHN0eWxlcz0iI2MwMDAwMDAiIHN0eWxlPSJzdHJva2U6IiB0ZXh0LWFuY2hvcj0bc3FnLXNwYWNlIiB0ZXh0LWFuY2hvcj0bc3FnLXNwYWNlIj48L3N0eWxlPiIgCikmOCsgMSBeIDAgal0K",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml"
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/badge-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "badge"
     }
   ]
 }

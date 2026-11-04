@@ -145,5 +145,78 @@
   </div>
 
   <script src="app.js"></script>
+
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('SW registrado:', registration.scope);
+          })
+          .catch((error) => {
+            console.error('Error registrando SW:', error);
+          });
+      });
+    }
+
+    // Solicitar permiso de notificaciones al cargar
+    function requestNotificationPermission() {
+      if (!('Notification' in window)) {
+        console.log('Este navegador no soporta notificaciones');
+        return;
+      }
+
+      if (Notification.permission === 'granted') {
+        console.log('Permiso de notificaciones ya concedido');
+        return;
+      }
+
+      if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then((permission) => {
+          if (permission === 'granted') {
+            console.log('Permiso de notificaciones concedido');
+            subscribeToPush();
+          } else {
+            console.log('Permiso de notificaciones denegado');
+          }
+        });
+      }
+    }
+
+    // Suscribirse a push notifications
+    async function subscribeToPush() {
+      if (!('PushManager' in window)) {
+        console.log('Push API no disponible');
+        return;
+      }
+
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array('BNsz6fS7Lm5tQJ8vK2wP4nR6xY9zA1bC3dE5fG7hI9jKlMnOpQrStUvWxYz012345678')
+        });
+        console.log('Suscripción push obtenida:', subscription.endpoint);
+        // Aquí se enviaría la suscripción a tu servidor backend
+      } catch (error) {
+        console.error('Error suscribiendo a push:', error);
+      }
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    }
+
+    // Solicitar permiso después de un breve delay
+    setTimeout(requestNotificationPermission, 1000);
+  </script>
 </body>
 </html>

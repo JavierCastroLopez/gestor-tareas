@@ -305,7 +305,10 @@ function handleTaskSubmit(e) {
   // 9. Limpiar input de tags
   if (tagInput) tagInput.value = '';
 
-  // 10. Cerrar modal ÚLTIMO
+  // 10. Notificar si la tarea tiene fecha límite cercana
+  try { notifyTaskCreated(task); } catch (e) { console.error('notifyTaskCreated error:', e); }
+
+  // 11. Cerrar modal ÚLTIMO
   setTimeout(closeTaskModal, 100);  // Retraso pequeño para asegurar que todo se guardó primero
 }
 
@@ -617,6 +620,28 @@ document.addEventListener('DOMContentLoaded', () => {
     appActions.insertBefore(importBtn, btnSettings);
   }
 
+  const notifyBtn = document.createElement('button');
+  notifyBtn.className = 'btn btn-secondary';
+  notifyBtn.id = 'notifyBtn';
+  notifyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg> Activar Notificaciones';
+  notifyBtn.onclick = async () => {
+    const granted = await requestNotificationPermission();
+    if (granted) {
+      await subscribeToPush();
+      notifyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg> Notificaciones Activas';
+      notifyBtn.classList.add('btn-primary');
+      notifyBtn.classList.remove('btn-secondary');
+      notifyBtn.disabled = true;
+      // Enviar notificación de prueba
+      setTimeout(() => sendTestPush(), 1000);
+    } else {
+      alert('No se pudo conceder el permiso de notificaciones. Revisa la configuración de tu navegador.');
+    }
+  };
+  if (appActions && btnSettings) {
+    appActions.insertBefore(notifyBtn, btnSettings);
+  }
+
   const importInput = document.createElement('input');
   importInput.type = 'file';
   importInput.id = 'importFile';
@@ -635,5 +660,112 @@ window.filterTasksInMemory = filterTasksInMemory;
 window.toggleTaskCompletion = toggleTaskCompletion;
 window.deleteTask = deleteTask;
 window.editTask = editTask;
+
+// ============================================
+// NOTIFICACIONES PUSH Y NATIVAS
+// ============================================
+
+// Solicitar permiso de notificaciones
+function requestNotificationPermission() {
+  if (!('Notification' in window)) {
+    console.log('Este navegador no soporta notificaciones');
+    return false;
+  }
+
+  if (Notification.permission === 'granted') {
+    return true;
+  }
+
+  if (Notification.permission !== 'denied') {
+    return Notification.requestPermission().then((permission) => {
+      return permission === 'granted';
+    });
+  }
+
+  return false;
+}
+
+// Mostrar notificación nativa del navegador
+function showNativeNotification(title, options = {}) {
+  if (!('Notification' in window)) {
+    console.log('Notificaciones no soportadas');
+    return null;
+  }
+
+  if (Notification.permission !== 'granted') {
+    console.log('Permiso de notificaciones no concedido');
+    return null;
+  }
+
+  const defaultOptions = {
+    icon: '/icons/icon-192.png',
+    badge: '/icons/badge-72.png',
+    vibrate: [200, 100, 200],
+    tag: 'task-notification',
+    requireInteraction: true,
+    renotify: true,
+    ...options
+  };
+
+  return new Notification(title, defaultOptions);
+}
+
+// Suscribirse a push notifications del Service Worker
+async function subscribeToPush() {
+  if (!('PushManager' in window)) {
+    console.log('Push API no disponible');
+    return null;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array('BNsz6fS7Lm5tQJ8vK2wP4nR6xY9zA1bC3dE5fG7hI9jKlMnOpQrStUvWxYz012345678')
+    });
+    console.log('Suscripción push obtenida:', subscription.endpoint);
+    return subscription;
+  } catch (error) {
+    console.error('Error suscribiendo a push:', error);
+    return null;
+  }
+}
+
+// Utilidad para convertir VAPID key
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+// Enviar notificación de prueba (simula un push)
+function sendTestPush() {
+  showNativeNotification('Gestor de Tareas', {
+    body: 'Esta es una notificación de prueba. ¡Las notificaciones están funcionando!',
+    tag: 'test-push'
+  });
+}
+
+// Mostrar notificación cuando se crea una tarea con fecha límite
+function notifyTaskCreated(task) {
+  if (!task.dueDate) return;
+
+  const taskDate = new Date(task.dueDate);
+  const now = new Date();
+  const diffHours = (taskDate - now) / (1000 * 60 * 60);
+
+  // Notificar si la tarea vence en las próximas 24 horas
+  if (diffHours > 0 && diffHours <= 24) {
+    showNativeNotification('Tarea próximamente', {
+      body: `${task.title} vence el ${taskDate.toLocaleDateString()}`,
+      tag: `task-${task.id}`
+    });
+  }
+}
 
 document.addEventListener('DOMContentLoaded', initApp);
