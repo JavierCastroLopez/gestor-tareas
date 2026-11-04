@@ -100,11 +100,11 @@ test.describe('Modal de nueva tarea', () => {
     await expect(page.locator('#taskTitle')).toBeFocused();
   });
 
-  test('E2E-11: reset de prioridad al abrir modal (Baja por defecto)', async ({ page }) => {
+  test('E2E-11: reset de prioridad al abrir modal (Media por defecto)', async ({ page }) => {
     await page.goto(BASE_URL);
     await page.click('#newTaskBtn');
-    const baja = page.locator('.priority-tag.baja.active');
-    await expect(baja).toBeVisible();
+    const media = page.locator('.priority-tag.media.active');
+    await expect(media).toBeVisible();
   });
 
   test('E2E-12: tags chips se limpian al abrir modal', async ({ page }) => {
