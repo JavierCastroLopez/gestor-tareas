@@ -876,6 +876,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   importInput.accept = '.json';
   importInput.style.display = 'none';
   document.body.appendChild(importInput);
+
+  // Inicializar la app: renderizar calendario, resumen, tareas y listeners
+  initApp();
 });
 
 // Funciones auxiliares para IndexedDB desde la app (main thread)
