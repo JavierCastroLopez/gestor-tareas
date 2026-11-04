@@ -769,10 +769,28 @@ function importData(file) {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
-  // Desregistrar Service Workers antiguos para evitar conflictos de caché
+  // Desregistrar Service Workers antiguos para evitar conflictos de caché y scope
   if ('serviceWorker' in navigator) {
     const registrations = await navigator.serviceWorker.getRegistrations();
-    registrations.forEach(reg => reg.unregister());
+    for (const reg of registrations) {
+      await reg.unregister();
+      console.log('[SW] Desregistro previo:', reg.scope);
+    }
+  }
+
+  // También limpiar cualquier registro huérfano en la raíz del dominio
+  if ('serviceWorker' in navigator) {
+    const controller = navigator.serviceWorker.controller;
+    if (controller) {
+      try {
+        await navigator.serviceWorker.ready;
+        await navigator.serviceWorker.getRegistration('/').then(reg => {
+          if (reg) reg.unregister();
+        });
+      } catch (e) {
+        console.log('[SW] No hay registro en raíz para limpiar:', e.message);
+      }
+    }
   }
 
   // Cargar tareas desde IndexedDB si localStorage está vacío
@@ -825,7 +843,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Registrar Service Worker al activar notificaciones
     if ('serviceWorker' in navigator) {
       try {
-        swRegistration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+        swRegistration = await navigator.serviceWorker.register('/gestor-tareas/sw.js', { scope: '/gestor-tareas/' });
         console.log('SW registrado:', swRegistration.scope);
       } catch (e) {
         console.error('Error registrando SW:', e);

@@ -84,9 +84,9 @@ self.addEventListener('notificationclick', (event) => {
 
   if (event.action === 'close') return;
 
-  const urlToOpen = event.notification.data && event.notification.data.url
-    ? event.notification.data.url
-    : '/';
+      const urlToOpen = event.notification.data && event.notification.data.url
+        ? event.notification.data.url
+        : '/gestor-tareas/';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
