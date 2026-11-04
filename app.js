@@ -26,11 +26,30 @@ function initApp() {
 }
 
 function setupEventListeners() {
-  const newTaskBtn = document.getElementById('newTaskBtn');
-  if (newTaskBtn) {
-    newTaskBtn.addEventListener('click', openTaskModal);
-  } else {
-    console.error('ERROR: newTaskBtn not found');
+  // Botón nueva tarea - se re-adge cada vez que el modal se abre
+  const setupNewTaskBtn = () => {
+    const newTaskBtn = document.getElementById('newTaskBtn');
+    if (newTaskBtn) {
+      newTaskBtn.removeEventListener('click', openTaskModal); // Limpiar listener anterior
+      newTaskBtn.addEventListener('click', openTaskModal);
+    } else {
+      console.error('ERROR: newTaskBtn not found');
+    }
+  };
+
+  // Ejecutar setup inicial
+  setupNewTaskBtn();
+
+  // Re-adge cada vez que el modal se abre (por atajo 'N' u otros medios)
+  const modal = document.getElementById('taskModal');
+  if (modal) {
+    modal.addEventListener('afterscriptexecute', setupNewTaskBtn);
+    // También asegurar que el listener se re-adge al cambiar de visibilidad
+    modal.addEventListener('toggle', () => {
+      if (modal.style.display === 'flex') {
+        setupNewTaskBtn();
+      }
+    });
   }
 
   const taskForm = document.getElementById('taskForm');
@@ -543,4 +562,32 @@ function importData(file) {
 }
 
 // Initialize
+document.addEventListener('DOMContentLoaded', () => {
+  // Botones de Exportar/Importar JSON (restore functionality)
+  const exportBtn = document.createElement('button');
+  exportBtn.className = 'btn btn-secondary';
+  exportBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Exportar JSON';
+  exportBtn.onclick = exportData;
+  const appActions = document.querySelector('.app-actions');
+  const btnSettings = document.querySelector('.btn-settings');
+  if (appActions && btnSettings) {
+    appActions.insertBefore(exportBtn, btnSettings);
+  }
+
+  const importBtn = document.createElement('button');
+  importBtn.className = 'btn btn-secondary';
+  importBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 3a2 2 0 012 2v7M7 12l5 5v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7l5-5M7 20l5-5v-7"/></svg> Importar JSON';
+  importBtn.onclick = () => document.getElementById('importFile').click();
+  if (appActions && btnSettings) {
+    appActions.insertBefore(importBtn, btnSettings);
+  }
+
+  const importInput = document.createElement('input');
+  importInput.type = 'file';
+  importInput.id = 'importFile';
+  importInput.accept = '.json';
+  importInput.style.display = 'none';
+  document.body.appendChild(importInput);
+});
+
 document.addEventListener('DOMContentLoaded', initApp);
