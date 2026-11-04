@@ -814,6 +814,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   notifyBtn.id = 'notifyBtn';
   notifyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg> Activar Notificaciones';
   notifyBtn.onclick = async () => {
+    // Verificar si estamos en HTTPS o localhost (requerido para Service Worker)
+    const isSecure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
+    if (!isSecure) {
+      alert('Las notificaciones push requieren HTTPS o localhost.\n\nSi estás abriendo el archivo directamente (file:///), las notificaciones no funcionarán.\n\nSube la app a GitHub Pages o usa un servidor local.');
+      return;
+    }
+
     // Registrar Service Worker al activar notificaciones
     if ('serviceWorker' in navigator) {
       try {
@@ -821,7 +829,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('SW registrado:', swRegistration.scope);
       } catch (e) {
         console.error('Error registrando SW:', e);
-        alert('Error registrando el Service Worker. Revisa la consola.');
+        alert('Error registrando el Service Worker: ' + e.message + '\n\nRevisa la consola para más detalles.');
         return;
       }
     }
@@ -843,6 +851,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
   if (appActions && btnSettings) {
     appActions.insertBefore(notifyBtn, btnSettings);
+  }
+
+  // Botón de prueba de notificación (funciona sin SW, solo con permiso de notificaciones)
+  const testNotifyBtn = document.createElement('button');
+  testNotifyBtn.className = 'btn btn-secondary';
+  testNotifyBtn.id = 'testNotifyBtn';
+  testNotifyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L1 7l11 6 11-6-11-5z"/><path d="M12 17a7 7 0 007-7v-2a7 7 0 00-7-7v2a7 7 0 007 7z"/></svg> Probar Notificación';
+  testNotifyBtn.onclick = async () => {
+    const granted = await requestNotificationPermission();
+    if (granted) {
+      sendTestPush();
+    } else {
+      alert('Permiso de notificaciones no concedido.');
+    }
+  };
+  if (appActions && btnSettings) {
+    appActions.insertBefore(testNotifyBtn, btnSettings);
   }
 
   const importInput = document.createElement('input');

@@ -119,10 +119,18 @@ body {
 
 /* Panels */
 .main-content {
-  display: grid;
-  grid-template-columns: 1fr 380px;
+  display: flex;
+  flex-direction: column;
   gap: 24px;
-  align-items: start;
+}
+
+@media (min-width: 901px) {
+  .main-content {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 24px;
+    align-items: start;
+  }
 }
 
 .panel {
@@ -133,6 +141,11 @@ body {
   box-shadow: var(--shadow);
   backdrop-filter: blur(10px);
   transition: var(--transition);
+  min-height: 200px;
+}
+
+.calendar-panel {
+  min-height: 400px;
 }
 
 .panel:hover {
