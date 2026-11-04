@@ -11,8 +11,166 @@ const PRIORITY_ORDER = { baja: 0, media: 1, alta: 2, urgente: 3 };
 
 let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
 let tagsCache = new Set();
+let swRegistration = null;
+let notificationPermissionRequested = false;
 
 console.log('App init: tasks loaded from localStorage:', tasks.length, 'tasks');
+
+// ============================================
+// COMUNICACIÓN CON SERVICE WORKER
+// ============================================
+
+function swMessage(type, payload) {
+  return new Promise((resolve, reject) => {
+    if (!swRegistration || !navigator.serviceWorker.controller) {
+      reject(new Error('Service Worker no disponible'));
+      return;
+    }
+
+    const messageChannel = new MessageChannel();
+    messageChannel.port1.onmessage = (event) => {
+      if (event.data.success) {
+        resolve(event.data);
+      } else {
+        reject(new Error(event.data.error || 'Error desconocido'));
+      }
+    };
+
+    navigator.serviceWorker.controller.postMessage(
+      { type, payload },
+      [messageChannel.port2]
+    );
+  });
+}
+
+async function saveTaskToSW(task) {
+  try {
+    await swMessage('SAVE_TASK', task);
+  } catch (e) {
+    console.error('SW save error:', e);
+  }
+}
+
+async function deleteTaskFromSW(taskId) {
+  try {
+    await swMessage('DELETE_TASK', taskId);
+  } catch (e) {
+    console.error('SW delete error:', e);
+  }
+}
+
+async function markTaskCompletedInSW(taskId) {
+  try {
+    await swMessage('MARK_COMPLETED', taskId);
+  } catch (e) {
+    console.error('SW mark error:', e);
+  }
+}
+
+async function startSWPeriodicCheck() {
+  try {
+    await swMessage('START_CHECK', null);
+  } catch (e) {
+    console.error('SW start check error:', e);
+  }
+}
+
+// ============================================
+// NOTIFICACIONES NATIVAS
+// ============================================
+
+async function requestNotificationPermission() {
+  if (notificationPermissionRequested) {
+    return Notification.permission === 'granted';
+  }
+
+  notificationPermissionRequested = true;
+
+  if (!('Notification' in window)) {
+    console.log('Este navegador no soporta notificaciones');
+    return false;
+  }
+
+  if (Notification.permission === 'granted') {
+    return true;
+  }
+
+  if (Notification.permission === 'denied') {
+    return false;
+  }
+
+  const permission = await Notification.requestPermission();
+  return permission === 'granted';
+}
+
+function showNativeNotification(title, options = {}) {
+  if (!('Notification' in window)) {
+    console.log('Notificaciones no soportadas');
+    return null;
+  }
+
+  if (Notification.permission !== 'granted') {
+    return null;
+  }
+
+  const defaultOptions = {
+    icon: '/icons/icon-192.png',
+    badge: '/icons/badge-72.png',
+    vibrate: [200, 100, 200],
+    tag: 'task-notification',
+    requireInteraction: true,
+    renotify: true,
+    ...options
+  };
+
+  return new Notification(title, defaultOptions);
+}
+
+async function subscribeToPush() {
+  if (!swRegistration) return;
+  try {
+    const subscription = await swRegistration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array('BNyoM5liKnDim3WXhzygRKsGzmqTxpuFKvyIGdWVuIAt-r0LABydNiAuC_qt0mhBk_noPLCPCHh-IHuBXji1q1Y')
+    });
+    console.log('Suscripción push:', subscription.endpoint);
+  } catch (e) {
+    console.error('Error suscribiendo a push:', e);
+  }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+function sendTestPush() {
+  showNativeNotification('Gestor de Tareas', {
+    body: '¡Las notificaciones están funcionando!',
+    tag: 'test-push'
+  });
+}
+
+function notifyTaskCreated(task) {
+  if (!task.dueDate) return;
+
+  const taskDate = new Date(task.dueDate);
+  const now = new Date();
+  const diffHours = (taskDate - now) / (1000 * 60 * 60);
+
+  if (diffHours > 0 && diffHours <= 24) {
+    showNativeNotification('Tarea próximamente', {
+      body: `${task.title} vence el ${taskDate.toLocaleDateString()}`,
+      tag: `task-${task.id}`
+    });
+  }
+}
 
 function initApp() {
   renderCalendar();
@@ -500,6 +658,7 @@ function toggleTaskCompletion(taskId) {
     renderCalendar();
     renderSummary();
     renderTasks();
+    markTaskCompletedInSW(taskId);
   }
 }
 
@@ -515,6 +674,7 @@ function deleteTask(taskId) {
     renderSummary();
     renderTasks();
     renderFilters();
+    deleteTaskFromSW(taskId);
   }
 }
 
@@ -528,6 +688,14 @@ function saveToLocalStorage() {
   try {
     localStorage.setItem('tasks', JSON.stringify(tasks));
     window.tasks = tasks;
+    // Guardar en IndexedDB para que el SW pueda leerlo y mostrar notificaciones
+    if ('indexedDB' in window) {
+      tasks.forEach(task => saveTaskToAppDB(task));
+    }
+    // También guardar en el SW
+    if (swRegistration && swRegistration.active) {
+      tasks.forEach(task => saveTaskToSW(task));
+    }
   } catch (e) {
     console.error('localStorage error:', e);
   }
@@ -600,7 +768,22 @@ function importData(file) {
 }
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // Cargar tareas desde IndexedDB si localStorage está vacío
+  if (tasks.length === 0 && 'indexedDB' in window) {
+    try {
+      const db = await openDBForApp();
+      const allTasks = await getAllTasksFromAppDB(db);
+      if (allTasks.length > 0) {
+        tasks = allTasks;
+        console.log('Tareas cargadas desde IndexedDB:', tasks.length);
+      }
+      db.close();
+    } catch (e) {
+      console.error('Error cargando desde IDB:', e);
+    }
+  }
+
   // Botones de Exportar/Importar JSON (restore functionality)
   const exportBtn = document.createElement('button');
   exportBtn.className = 'btn btn-secondary';
@@ -625,6 +808,18 @@ document.addEventListener('DOMContentLoaded', () => {
   notifyBtn.id = 'notifyBtn';
   notifyBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg> Activar Notificaciones';
   notifyBtn.onclick = async () => {
+    // Registrar Service Worker al activar notificaciones
+    if ('serviceWorker' in navigator) {
+      try {
+        swRegistration = await navigator.serviceWorker.register('/sw.js');
+        console.log('SW registrado:', swRegistration.scope);
+      } catch (e) {
+        console.error('Error registrando SW:', e);
+        alert('Error registrando el Service Worker. Revisa la consola.');
+        return;
+      }
+    }
+
     const granted = await requestNotificationPermission();
     if (granted) {
       await subscribeToPush();
@@ -632,6 +827,8 @@ document.addEventListener('DOMContentLoaded', () => {
       notifyBtn.classList.add('btn-primary');
       notifyBtn.classList.remove('btn-secondary');
       notifyBtn.disabled = true;
+      // Iniciar verificación periódica en el SW
+      await startSWPeriodicCheck();
       // Enviar notificación de prueba
       setTimeout(() => sendTestPush(), 1000);
     } else {
@@ -650,6 +847,52 @@ document.addEventListener('DOMContentLoaded', () => {
   document.body.appendChild(importInput);
 });
 
+// Funciones auxiliares para IndexedDB desde la app (main thread)
+const APP_DB_NAME = 'TaskManagerDB';
+const APP_DB_VERSION = 1;
+const APP_STORE_NAME = 'tasks';
+
+function openDBForApp() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(APP_DB_NAME, APP_DB_VERSION);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(APP_STORE_NAME)) {
+        const store = db.createObjectStore(APP_STORE_NAME, { keyPath: 'id' });
+        store.createIndex('dueDate', 'dueDate', { unique: false });
+        store.createIndex('completed', 'completed', { unique: false });
+        store.createIndex('notified', 'notified', { unique: false });
+      }
+    };
+  });
+}
+
+async function getAllTasksFromAppDB(db) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([APP_STORE_NAME], 'readonly');
+    const store = transaction.objectStore(APP_STORE_NAME);
+    const request = store.getAll();
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
+}
+
+async function saveTaskToAppDB(task) {
+  const db = await openDBForApp();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([APP_STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(APP_STORE_NAME);
+    const request = store.put(task);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      db.close();
+      resolve(request.result);
+    };
+  });
+}
+
 // Exponer API para tests unitarios
 window.PRIORITY_COLORS = PRIORITY_COLORS;
 window.PRIORITY_ORDER = PRIORITY_ORDER;
@@ -660,112 +903,3 @@ window.filterTasksInMemory = filterTasksInMemory;
 window.toggleTaskCompletion = toggleTaskCompletion;
 window.deleteTask = deleteTask;
 window.editTask = editTask;
-
-// ============================================
-// NOTIFICACIONES PUSH Y NATIVAS
-// ============================================
-
-// Solicitar permiso de notificaciones
-function requestNotificationPermission() {
-  if (!('Notification' in window)) {
-    console.log('Este navegador no soporta notificaciones');
-    return false;
-  }
-
-  if (Notification.permission === 'granted') {
-    return true;
-  }
-
-  if (Notification.permission !== 'denied') {
-    return Notification.requestPermission().then((permission) => {
-      return permission === 'granted';
-    });
-  }
-
-  return false;
-}
-
-// Mostrar notificación nativa del navegador
-function showNativeNotification(title, options = {}) {
-  if (!('Notification' in window)) {
-    console.log('Notificaciones no soportadas');
-    return null;
-  }
-
-  if (Notification.permission !== 'granted') {
-    console.log('Permiso de notificaciones no concedido');
-    return null;
-  }
-
-  const defaultOptions = {
-    icon: '/icons/icon-192.png',
-    badge: '/icons/badge-72.png',
-    vibrate: [200, 100, 200],
-    tag: 'task-notification',
-    requireInteraction: true,
-    renotify: true,
-    ...options
-  };
-
-  return new Notification(title, defaultOptions);
-}
-
-// Suscribirse a push notifications del Service Worker
-async function subscribeToPush() {
-  if (!('PushManager' in window)) {
-    console.log('Push API no disponible');
-    return null;
-  }
-
-  try {
-    const registration = await navigator.serviceWorker.ready;
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array('BNsz6fS7Lm5tQJ8vK2wP4nR6xY9zA1bC3dE5fG7hI9jKlMnOpQrStUvWxYz012345678')
-    });
-    console.log('Suscripción push obtenida:', subscription.endpoint);
-    return subscription;
-  } catch (error) {
-    console.error('Error suscribiendo a push:', error);
-    return null;
-  }
-}
-
-// Utilidad para convertir VAPID key
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
-
-// Enviar notificación de prueba (simula un push)
-function sendTestPush() {
-  showNativeNotification('Gestor de Tareas', {
-    body: 'Esta es una notificación de prueba. ¡Las notificaciones están funcionando!',
-    tag: 'test-push'
-  });
-}
-
-// Mostrar notificación cuando se crea una tarea con fecha límite
-function notifyTaskCreated(task) {
-  if (!task.dueDate) return;
-
-  const taskDate = new Date(task.dueDate);
-  const now = new Date();
-  const diffHours = (taskDate - now) / (1000 * 60 * 60);
-
-  // Notificar si la tarea vence en las próximas 24 horas
-  if (diffHours > 0 && diffHours <= 24) {
-    showNativeNotification('Tarea próximamente', {
-      body: `${task.title} vence el ${taskDate.toLocaleDateString()}`,
-      tag: `task-${task.id}`
-    });
-  }
-}
-
-document.addEventListener('DOMContentLoaded', initApp);

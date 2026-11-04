@@ -20,8 +20,8 @@ module.exports = defineConfig({
     },
   ],
   webServer: {
-    command: 'python3 -m http.server 8888 --directory /home/javiercl/Escritorio/DAIA/gestorTareas',
-    url: 'http://localhost:8888/index.html',
+    command: 'python3 -m http.server 8889 --directory /home/javiercl/Escritorio/DAIA/gestorTareas',
+    url: 'http://localhost:8889/index.html',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },

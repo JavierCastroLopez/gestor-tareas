@@ -1,8 +1,8 @@
-// Service Worker - Gestor de Tareas
-// Maneja notificaciones push incluso con la app cerrada
+// Service Worker - Gestor de Tareas con Notificaciones Locales
+// Verifica tareas vencidas y muestra notificaciones nativas sin servidor externo
 
 const CACHE_NAME = 'task-manager-v1';
-const VAPID_PUBLIC_KEY = 'BM6...'; // Reemplazar con tu clave VAPID pública real
+const CHECK_INTERVAL = 60 * 1000; // Verificar cada minuto
 
 // Instalación del Service Worker
 self.addEventListener('install', (event) => {
@@ -13,133 +13,254 @@ self.addEventListener('install', (event) => {
 // Activación del Service Worker
 self.addEventListener('activate', (event) => {
   console.log('[SW] Activando Service Worker');
-  event.waitUntil(
-    clients.claim()
-  );
+  event.waitUntil(clients.claim());
 });
 
-// Escuchar mensajes push del servidor
-self.addEventListener('push', (event) => {
-  console.log('[SW] Push recibido');
+// Interceptar peticiones de red - simplemente reenviar a la red
+self.addEventListener('fetch', (event) => {
+  event.respondWith(fetch(event.request));
+});
 
+// Verificación periódica de tareas vencidas
+let checkInterval = null;
+
+function startPeriodicCheck() {
+  if (checkInterval) clearInterval(checkInterval);
+  checkInterval = setInterval(() => {
+    checkAndNotifyTasks();
+  }, CHECK_INTERVAL);
+  console.log('[SW] Verificación periódica iniciada cada', CHECK_INTERVAL / 1000, 'segundos');
+}
+
+// Función principal: verificar tareas y mostrar notificaciones
+async function checkAndNotifyTasks() {
+  try {
+    // Obtener todas las tareas desde IndexedDB
+    const tasks = await getAllTasksFromIDB();
+    const now = new Date();
+
+    for (const task of tasks) {
+      if (!task.dueDate || task.completed || task.notified) continue;
+
+      const taskDate = new Date(task.dueDate);
+      const diffMinutes = (taskDate - now) / (1000 * 60);
+
+      // Notificar si la tarea vence en los próximos 60 minutos o ya venció (hace menos de 60 min)
+      if (diffMinutes <= 60 && diffMinutes > -60) {
+        await showLocalNotification(task);
+        // Marcar como notificada para no repetir
+        await markTaskAsNotified(task.id);
+      }
+    }
+  } catch (error) {
+    console.error('[SW] Error verificando tareas:', error);
+  }
+}
+
+// Mostrar notificación local desde el Service Worker
+async function showLocalNotification(task) {
   const options = {
-    body: 'Tienes tareas pendientes para hoy',
+    body: task.description ? task.description : 'Tarea pendiente',
     icon: '/icons/icon-192.png',
     badge: '/icons/badge-72.png',
     vibrate: [200, 100, 200],
+    tag: `task-${task.id}`,
+    renotify: true,
+    requireInteraction: true,
     data: {
       url: '/',
+      taskId: task.id,
       timestamp: Date.now()
     },
     actions: [
-      {
-        action: 'open',
-        title: 'Abrir app',
-        icon: '/icon-192.png'
-      },
-      {
-        action: 'close',
-        title: 'Cerrar',
-        icon: '/icon-192.png'
-      }
-    ],
-    tag: 'task-notification',
-    renotify: true,
-    requireInteraction: true,
-    silent: false
+      { action: 'open', title: 'Abrir', icon: '/icons/icon-192.png' },
+      { action: 'close', title: 'Cerrar', icon: '/icons/icon-192.png' }
+    ]
   };
 
-  // Intentar obtener datos del push
+  await self.registration.showNotification(`⏰ ${task.title}`, options);
+  console.log('[SW] Notificación mostrada:', task.title);
+}
+
+// Manejar clics en notificaciones
+self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notificación clickeada:', event.action);
+  event.notification.close();
+
+  if (event.action === 'close') return;
+
+  const urlToOpen = event.notification.data && event.notification.data.url
+    ? event.notification.data.url
+    : '/';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (let client of windowClients) {
+        if (client.url === self.location.origin + urlToOpen && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});
+
+// ============================================
+// INDEXEDDB - Almacenamiento local de tareas
+// ============================================
+
+const DB_NAME = 'TaskManagerDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'tasks';
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        store.createIndex('dueDate', 'dueDate', { unique: false });
+        store.createIndex('completed', 'completed', { unique: false });
+        store.createIndex('notified', 'notified', { unique: false });
+      }
+    };
+  });
+}
+
+async function getAllTasksFromIDB() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.getAll();
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
+}
+
+async function saveTaskToIDB(task) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.put(task);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
+}
+
+async function markTaskAsNotified(taskId) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const getRequest = store.get(taskId);
+    getRequest.onsuccess = () => {
+      const task = getRequest.result;
+      if (task) {
+        task.notified = true;
+        const putRequest = store.put(task);
+        putRequest.onsuccess = () => resolve();
+        putRequest.onerror = () => reject(putRequest.error);
+      } else {
+        resolve();
+      }
+    };
+    getRequest.onerror = () => reject(getRequest.error);
+  });
+}
+
+async function deleteTaskFromIDB(taskId) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.delete(taskId);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
+}
+
+// ============================================
+// MENSAJES DESDE LA APP (main thread)
+// ============================================
+
+self.addEventListener('message', async (event) => {
+  const { type, payload } = event.data;
+
+  if (type === 'SAVE_TASK') {
+    try {
+      await saveTaskToIDB(payload);
+      event.ports[0].postMessage({ success: true });
+    } catch (e) {
+      event.ports[0].postMessage({ success: false, error: e.message });
+    }
+  } else if (type === 'DELETE_TASK') {
+    try {
+      await deleteTaskFromIDB(payload);
+      event.ports[0].postMessage({ success: true });
+    } catch (e) {
+      event.ports[0].postMessage({ success: false, error: e.message });
+    }
+  } else if (type === 'MARK_COMPLETED') {
+    try {
+      const db = await openDB();
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const getRequest = store.get(payload);
+      getRequest.onsuccess = () => {
+        const task = getRequest.result;
+        if (task) {
+          task.completed = true;
+          store.put(task);
+        }
+      };
+      event.ports[0].postMessage({ success: true });
+    } catch (e) {
+      event.ports[0].postMessage({ success: false, error: e.message });
+    }
+  } else if (type === 'START_CHECK') {
+    startPeriodicCheck();
+    event.ports[0].postMessage({ success: true });
+  }
+});
+
+// Iniciar verificación periódica al activar
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    clients.claim().then(() => {
+      startPeriodicCheck();
+    })
+  );
+});
+
+// Escuchar push notifications externas (opcional, para futuro servidor)
+self.addEventListener('push', (event) => {
+  console.log('[SW] Push externo recibido');
+  const options = {
+    body: 'Tienes una nueva notificación',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/badge-72.png',
+    vibrate: [200, 100, 200],
+    tag: 'external-push',
+    renotify: true,
+    requireInteraction: true
+  };
+
   if (event.data) {
     try {
       const data = event.data.json();
       options.body = data.body || options.body;
       options.title = data.title || 'Gestor de Tareas';
-      options.data = data.options || options.data;
-      if (data.actions) options.actions = data.actions;
     } catch (e) {
-      console.error('[SW] Error parseando datos push:', e);
-      options.title = 'Gestor de Tareas';
+      console.error('[SW] Error parseando push:', e);
     }
-  } else {
-    options.title = 'Gestor de Tareas';
   }
 
-  event.waitUntil(
-    self.registration.showNotification(options.title, options)
-  );
-});
-
-// Manejar clics en notificaciones
-self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notificación clickeada:', event.action);
-
-  event.notification.close();
-
-  if (event.action === 'close') {
-    return;
-  }
-
-  // Abrir la aplicación
-  const urlToOpen = event.notification.data && event.notification.data.url
-    ? event.notification.data.url
-    : '/';
-
-  const promiseChain = clients.matchAll({
-    type: 'window',
-    includeUncontrolled: true
-  }).then((windowClients) => {
-    // Buscar si ya hay una ventana abierta de la app
-    for (let client of windowClients) {
-      if (client.url === self.location.origin + urlToOpen && 'focus' in client) {
-        return client.focus();
-      }
-    }
-    // Si no hay ninguna abierta, abrir una nueva
-    if (clients.openWindow) {
-      return clients.openWindow(urlToOpen);
-    }
-  });
-
-  event.waitUntil(promiseChain);
-});
-
-// Manejar errores de push
-self.addEventListener('pushsubscriptionchange', (event) => {
-  console.log('[SW] Suscripción push cambiada');
-  event.waitUntil(
-    self.registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-    }).then((newSubscription) => {
-      console.log('[SW] Nueva suscripción obtenida:', newSubscription);
-      // Aquí se enviaría la nueva suscripción al servidor
-    })
-  );
-});
-
-// Utilidad para convertir VAPID key
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
-
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
-
-// Sincronización en segundo plano (para cuando recupere conexión)
-self.addEventListener('sync', (event) => {
-  console.log('[SW] Sync evento:', event.tag);
-  if (event.tag === 'sync-tasks') {
-    event.waitUntil(
-      // Sincronizar tareas pendientes
-      Promise.resolve()
-    );
-  }
+  event.waitUntil(self.registration.showNotification(options.title || 'Gestor de Tareas', options));
 });

@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
-const BASE_URL = 'http://localhost:8888/index.html';
+const BASE_URL = 'http://localhost:8889/index.html';
 
 // Helper: crear una tarea completa desde el modal
 async function crearTarea(page, { title, descripcion, fecha, prioridad, etiquetas } = {}) {
