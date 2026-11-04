@@ -131,50 +131,57 @@ function openTaskModal(taskId = null) {
   if (taskIdInput) taskIdInput.value = '';
 
   if (taskId) {
-    // Modo edición
+    // Modo edición: buscar la tarea en el array
     const task = tasks.find(t => t.id === taskId);
-    if (!task) { console.error('Task not found for edit'); return; }
-    title.textContent = 'Editar tarea';
-    if (taskTitle) taskTitle.value = task.title || '';
-    if (taskDescription) taskDescription.value = task.description || '';
-    if (taskDueDate) taskDueDate.value = task.dueDate || '';
+    if (task) {
+      // Tarea encontrada - cargar datos en el formulario
+      title.textContent = 'Editar tarea';
+      if (taskTitle) taskTitle.value = task.title || '';
+      if (taskDescription) taskDescription.value = task.description || '';
+      if (taskDueDate) taskDueDate.value = task.dueDate || '';
 
-    // Set priority with fallback
-    if (priorityTags.length > 0) {
-      priorityTags.forEach(tag => {
-        if (tag.dataset.value === task.priority) {
-          tag.classList.add('active');
-        } else {
-          tag.classList.remove('active');
-        }
-      });
-    }
-  } else {
-    // Modo nueva tarea
-    title.textContent = 'Nueva tarea';
-
-    // Reset priority tags with forced baja
-    if (priorityTags.length > 0) {
-      priorityTags.forEach(tag => tag.classList.remove('active'));
-      if (priorityTags[0]) priorityTags[0].classList.add('active');  // Forzar "Baja"
-    }
-
-    // Clear tags completely
-    if (tagsChips) tagsChips.innerHTML = '';
-    tagsCache.clear();
-
-    // Force focus to title with multiple attempts
-    if (taskTitle) {
-      taskTitle.value = '';  // Empieza vacío
-      // Multiple focus attempts with delays
-      taskTitle.focus();
-      setTimeout(() => { if (!document.activeElement.isSameNode(taskTitle)) taskTitle.focus(); }, 50);
-      setTimeout(() => { if (!document.activeElement.isSameNode(taskTitle)) taskTitle.focus(); }, 150);
+      // Set priority with fallback
+      if (priorityTags.length > 0) {
+        priorityTags.forEach(tag => {
+          if (tag.dataset.value === task.priority) {
+            tag.classList.add('active');
+          } else {
+            tag.classList.remove('active');
+          }
+        });
+      }
+    } else {
+      // Tarea NO encontrada - fallback a modo nueva tarea
+      console.warn('Tarea no encontrada para editar - iniciando nueva tarea');
+      // No hacer return, continuar con el modo nueva tarea abajo
     }
   }
+  
+  // Modo nueva tarea (siempre se ejecuta si no hay taskId o si task no fue encontrado)
+  title.textContent = 'Nueva tarea';
 
-  // Final: show modal
-  if (modal) modal.style.display = 'flex';
+  // Reset priority tags with forced baja
+  if (priorityTags.length > 0) {
+    priorityTags.forEach(tag => tag.classList.remove('active'));
+    if (priorityTags[0]) priorityTags[0].classList.add('active');  // Forzar "Baja"
+  }
+
+  // Clear tags completely
+  if (tagsChips) tagsChips.innerHTML = '';
+  tagsCache.clear();
+
+  // Force focus to title with multiple attempts
+  if (taskTitle) {
+    taskTitle.value = '';  // Empieza vacío
+    // Multiple focus attempts with delays
+    taskTitle.focus();
+    setTimeout(() => { if (!document.activeElement.isSameNode(taskTitle)) taskTitle.focus(); }, 50);
+    setTimeout(() => { if (!document.activeElement.isSameNode(taskTitle)) taskTitle.focus(); }, 150);
+  }
+}
+
+// Final: show modal
+if (modal) modal.style.display = 'flex';
 }
 
 function closeTaskModal() {
