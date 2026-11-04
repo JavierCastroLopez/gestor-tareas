@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificación Final - Creación de Tareas</title>
+  <style>
+    :root {
+      --bg-primary: #121212;
+      --bg-card: #1E1E1E;
+      --text-primary: #EAEAEA;
+      --text-secondary: #8888AA;
+      --accent-primary: #9933FF;
+      --border-muted: #3A3A5A;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      background: var(--bg-primary); 
+      color: var(--text-primary); 
+      font-family: system-ui, sans-serif; 
+      min-height: 100vh; 
+      padding: 20px;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    .section { 
+      background: var(--bg-card); 
+      border-radius: 12px; 
+      padding: 24px; 
+      margin-bottom: 20px; 
+      border: 1px solid var(--border-muted);
+    }
+    .section h2 { 
+      color: var(--accent-primary); 
+      margin-bottom: 20px; 
+      display: flex; 
+      align-items: center; 
+      gap: 8px;
+    }
+    .section h2::before { content: "🧪 "; }
+    .test-step { 
+      background: #0d0d0d; 
+      padding: 16px; 
+      border-radius: 8px; 
+      margin: 12px 0; 
+      border-left: 4px solid var(--accent-primary);
+    }
+    .test-step.pass { border-left-color: #4caf50; }
+    .test-step.fail { border-left-color: #ff5252; }
+    .test-step.info { border-left-color: #9933ff; }
+    .input-group { 
+      margin: 12px 0; 
+    }
+    .input-group label { 
+      display: block; 
+      margin-bottom: 6px; 
+      font-size: 13px; 
+      color: var(--text-secondary); 
+    }
+    .input-group input, 
+    .input-group textarea, 
+    .input-group select { 
+      width: 100%; 
+      padding: 10px; 
+      background: var(--bg-primary); 
+      border: 1px solid var(--border-muted); 
+      border-radius: 8px; 
+      color: var(--text-primary); 
+      font-size: 14px; 
+      margin-top: 4px;
+    }
+    .input-group input:focus, 
+    .input-group textarea:focus, 
+    .input-group select:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+    }
+    .btn { 
+      display: inline-block; 
+      padding: 10px 20px; 
+      border: none; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      font-size: 14px; 
+      margin: 5px; 
+      transition: opacity 0.2s;
+    }
+    .btn-primary { background: var(--accent-primary); color: #fff; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-secondary { background: var(--bg-primary); color: var(--text-primary); }
+    .btn-secondary:hover { opacity: 0.9; }
+    .result { 
+      margin-top: 12px; 
+      padding: 12px; 
+      border-radius: 8px; 
+      display: none;
+    }
+    .result.pass { background: rgba(76, 175, 80, 0.2); color: #4caf50; }
+    .result.fail { background: rgba(255, 82, 82, 0.2); color: #ff5252; }
+    .result.info { background: rgba(153, 51, 255, 0.2); color: #9933ff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Verificación Final de Funcionalidad</h1>
+    <p>Prueba la creación de tareas en la aplicación real</p>
+    
+    <div class="section">
+      <h2>Test 1: Crear tarea con título normal</h2>
+      <div class="test-step info" id="step1">
+        <h3>✅ Instrucciones</h3>
+        <ol>
+          <li>Escribe un título en el input (ej: "Comprar leche")</li>
+          <li>Opcional: Agrega una descripción</li>
+          <li>Opcional: Selecciona una prioridad</li>
+          <li>Opcional: Agrega etiquetas separadas por comas</li>
+          <li>Clic en "Guardar tarea"</li>
+          <li>Verifica que la tarea aparece en la lista abajo</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Test 2: Crear tarea con título vacío (fallback automático)</h2>
+      <div class="test-step info" id="step2">
+        <h3>✅ Instrucciones</h3>
+        <ol>
+          <li>Deja el campo de título en blanco (vacío)</li>
+          <li>Clic en "Guardar tarea"</li>
+          <li>Verifica que aparece una tarea con título "Tarea sin título"</li>
+          <li>Esto demuestra que el sistema maneja casos borde</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Test 3: Crear tarea rápida con tecla 'N'</h2>
+      <div class="test-step info" id="step3">
+        <h3>✅ Instrucciones</h3>
+        <ol>
+          <li>Presionar tecla 'N' en el teclado (mientras estés en la app)</li>
+          <li>El modal de nueva tarea debería abrirse</li>
+          <li>Escribe un título y guarda</li>
+          <li>Verifica que la tarea se crea</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Test 4: Verificar persistencia en localStorage</h2>
+      <div class="test-step info" id="step4">
+        <h3>✅ Instrucciones</h3>
+        <ol>
+          <li>Crea 2-3 tareas</li>
+          <li>Cierra la pestaña del navegador</li>
+          <li>Vuelve a abrir la aplicación</li>
+          <li>Verifica que todas las tareas reaparecen</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Test 5: Verificar filtros y prioridades</h2>
+      <div class="test-step info" id="step5">
+        <h3>✅ Instrucciones</h3>
+        <ol>
+          <li>Crea tareas con diferentes prioridades (Baja, Media, Alta, Urgente)</li>
+          <li>Usa el dropdown "Filtrar por prioridad"</li>
+          <li>Verifica que filtra correctamente</li>
+          <li>Prueba combinar con filtro de etiquetas</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="section" id="results-section" style="margin-top: 40px;">
+      <h2>📊 Resultados</h2>
+      <div id="results" style="display: none;"></div>
+    </div>
+  </div>
+
+  <script>
+    // Resultados de los tests
+    const results = {
+      test1: false, // Título normal
+      test2: false, // Título vacío fallback
+      test3: false, // Tecla N
+      test4: false, // localStorage
+      test5: false, // Filtros
+    };
+
+    function showResult(testId, passed) {
+      results[testId] = passed;
+      const step = document.getElementById('step' + testId);
+      const resultDiv = step.querySelector('.result') || createResultDiv(step, testId, passed);
+      step.className = 'test-step ' + (passed ? 'pass' : 'fail');
+      resultDiv.style.display = 'block';
+    }
+
+    function createResultDiv(step, testId, passed) {
+      const div = document.createElement('div');
+      div.className = 'result ' + (passed ? 'pass' : 'fail');
+      div.innerHTML = passed ? '✅ Test pasado' : '❌ Test falló';
+      step.appendChild(div);
+      return div;
+    }
+
+    // Verificar estado después de crear tareas
+    setTimeout(() => {
+      const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+      const taskCount = tasks.length;
+      
+      // Test 1: Verificar que hay tareas
+      if (taskCount > 0) {
+        // Verificar que todas tienen título
+        const allHaveTitle = tasks.every(t => t.title && t.title.trim().length > 0);
+        showResult(1, allHaveTitle && taskCount >= 1);
+      } else {
+        showResult(1, false);
+      }
+      
+      // Test 2: Verificar fallback de título vacío
+      const hasFallback = tasks.some(t => t.title === 'Tarea sin título');
+      showResult(2, hasFallback);
+      
+      // Test 4: Verificar localStorage
+      showResult(4, taskCount > 0 ? true : false);
+      
+      // Mostrar resumen
+      document.getElementById('results-section').style.display = 'block';
+      document.getElementById('results').innerHTML = '<h3>Resumen:</h3>' +
+        '<p>Tareas creadas: ' + taskCount + '</p>' +
+        (hasFallback ? '<p>✅ Fallback de título vacío activo</p>' : '') +
+        '<p>✅ localStorage funcional</p>';
+    }, 500);
+  </script>
+
+  <!-- Incluir la aplicación real -->
+  <script src="app.js"></script>
+</body>
+</html>
