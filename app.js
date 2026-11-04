@@ -151,6 +151,26 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 function sendTestPush() {
+  // Si hay SW activo, pedirle que muestre la notificación (funciona en segundo plano)
+  if (swRegistration && swRegistration.active) {
+    swRegistration.showNotification('🔔 Gestor de Tareas', {
+      body: '¡Las notificaciones están funcionando!',
+      icon: './icons/icon-192.png',
+      badge: './icons/badge-72.png',
+      vibrate: [200, 100, 200],
+      tag: 'test-push',
+      renotify: true,
+      requireInteraction: true,
+      data: { url: '/gestor-tareas/', timestamp: Date.now() },
+      actions: [
+        { action: 'open', title: 'Abrir', icon: '/icons/icon-192.png' },
+        { action: 'close', title: 'Cerrar', icon: '/icons/icon-192.png' }
+      ]
+    });
+    console.log('[SW] Notificación de prueba enviada desde SW');
+    return;
+  }
+  // Fallback: notificación nativa del main thread (solo con pestaña abierta)
   showNativeNotification('Gestor de Tareas', {
     body: '¡Las notificaciones están funcionando!',
     tag: 'test-push'
