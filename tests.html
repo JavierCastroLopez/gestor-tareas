@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suite de Tests - Calendario & Gestor de Tareas</title>
+  <style>
+    :root {
+      --bg-primary: #121212;
+      --bg-card: #1E1E1E;
+      --text-primary: #EAEAEA;
+      --text-secondary: #8888AA;
+      --accent-primary: #9933FF;
+      --border-muted: #3A3A5A;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      background: var(--bg-primary); 
+      color: var(--text-primary); 
+      font-family: system-ui, sans-serif; 
+      min-height: 100vh; 
+      padding: 20px;
+    }
+    .test-container { max-width: 1200px; margin: 0 auto; }
+    .test-section { 
+      background: var(--bg-card); 
+      border-radius: 12px; 
+      padding: 24px; 
+      margin-bottom: 24px; 
+      border: 1px solid var(--border-muted);
+    }
+    .test-section h2 { 
+      color: var(--accent-primary); 
+      margin-bottom: 20px; 
+      display: flex; 
+      align-items: center; 
+      gap: 8px; 
+    }
+    .test-section h2::before { content: "� test "; }
+    .test-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    .test-card { 
+      padding: 20px; 
+      border-radius: 8px; 
+      margin: 10px 0;
+    }
+    .test-card.pass { border-left: 3px solid #4CAF50; background: rgba(76, 175, 80, 0.1); }
+    .test-card.fail { border-left: 3px solid #FF5252; background: rgba(255, 82, 82, 0.1); }
+    .test-card.warn { border-left: 3pxsolid #FFC107; background: rgba(255, 193, 7, 0.1); }
+    .test-card.info { border-left: 3px solid #9933FF; background: rgba(153, 51, 255, 0.1); }
+    .test-card h3 { margin-bottom: 10px; font-size: 14px; }
+    .test-card p { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+    .test-card .steps { 
+      background: var(--bg-primary); 
+      padding: 12px; 
+      border-radius: 4px; 
+      margin-top: 10px; 
+      font-family: monospace; 
+      font-size: 12px; 
+      white-space: pre-wrap;
+    }
+    .btn-test { 
+      display: inline-block; 
+      padding: 8px 16px; 
+      background: var(--accent-primary); 
+      color: #fff; 
+      border: none; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      font-size: 13px; 
+      margin: 5px; 
+      transition: opacity 0.2s;
+    }
+    .btn-test:hover { opacity: 0.9; }
+    .btn-test:disabled { background: #666; cursor: not-allowed; }
+    .status-indicator { 
+      display: inline-block; 
+      width: 12px; 
+      height: 12px; 
+      border-radius: 50%; 
+      margin-right: 8px; 
+    }
+    .status-pass { background: #4CAF50; }
+    .status-fail { background: #FF5252; }
+    .status-pending { background: #FFC107; }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🧪 Suite de Tests - Calendario & Gestor de Tareas</h1>
+    <p>Copia este archivo en la misma carpeta que index.html y ábrelo en el navegador</p>
+    
+    <div class="test-section">
+      <h2>Test 1: Creación de Tareas</h2>
+      <div class="test-grid">
+        <div class="test-card info">
+          <h3>TC01: Crear tarea básica</h3>
+          <p>Verificar que al crear una tarea con título, se guarda en localStorage y aparece en la lista.</p>
+          <div class="steps">
+            1. Abrir la app en el navegador<br>
+            2. Clic en botón "+" o presionar tecla 'N'<br>
+            3. Completar título y pulsar "Guardar"<br>
+            4. Verificar que la tarea aparece en la lista<br>
+            5. Revisar localStorage para confirmar persistencia
+          </div>
+        </div>
+        <div class="test-card info">
+          <h3>TC02: Crear tarea con descripción</h3>
+          <p>Verificar que la descripción opcional se guarda correctamente.</p>
+          <div class="steps">
+            1. Crear tarea con título<br>
+            2. Agregar descripción en el textarea<br>
+            3. Guardar y verificar que aparece el texto en la tarjeta
+          </div>
+        </div>
+        <div class="test-card info">
+          <h3>TC03: Crear tarea con fecha límite</h3>
+          <p>Verificar que la fecha límite se guarda y refleja en el calendario.</p>
+          <div class="steps">
+            1. Agregar fecha en el input date<br>
+            2. Guardar tarea<br>
+            3. Revisar que el día correspondiente en el calendario muestra el punto
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 2: Sistema de Prioridades</h2>
+      <div class="test-grid">
+        <div class="test-card pass">
+          <h3>TC04: Prioridad Baja</h3>
+          <p>Verificar que la prioridad "Baja" tiene su badge verde.</p>
+          <div class="steps">
+            1. Crear tarea nueva<br>
+            2. Seleccionar prioridad "Baja" en los tags morados<br>
+            3. Verificar que el badge muestra "Baja" en color verde<br>
+            4. Verificar que el color es rgba(76,175,80,0.2) con texto #4CAF50
+          </div>
+        </div>
+        <div class="test-card pass">
+          <h3>TC05: Prioridad Media</h3>
+          <p>Verificar que la prioridad "Media" tiene su badge amarillo.</p>
+          <div class="steps">
+            1. Crear tarea nueva<br>
+            2. Seleccionar prioridad "Media"<br>
+            3. Verificar badge amarillo con texto #FFC107
+          </div>
+        </div>
+        <div class="test-card pass">
+          <h3>TC06: Prioridad Alta</h3>
+          <p>Verificar que la prioridad "Alta" tiene subadge naranja.</p>
+          <div class="steps">
+            1. Crear tarea nueva<br>
+            2. Seleccionar prioridad "Alta"<br>
+            3. Verificar badge naranja con texto #FF572B
+          </div>
+        </div>
+        <div class="test-card pass">
+          <h3>TC07: Prioridad Urgente</h3>
+          <p>Verificar que la prioridad "Urgente" tiene subadge morado.</p>
+          <div class="steps">
+            1. Crear tarea nueva<br>
+            2. Seleccionar prioridad "Urgente"<br>
+            3. Verificar badge morado con texto #9933FF y fondo rgba(153,51,255,0.4)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 3: Etiquetas y Filtrado</h2>
+      <div class="test-grid">
+        <div class="test-card info">
+          <h3>TC08: Crear etiquetas personalizadas</h3>
+          <p>Verificar que el usuario puede crear etiquetas libres.</p>
+          <div class="steps">
+            1. En el modal, escribir etiqueta en el input "Nueva etiqueta..."<br>
+            2. Separar múltiples etiquetas con coma (ej: "trabajo,urgente,importante")<br>
+            3. Guardar y verificar que aparecen como chips debajo de la tarea
+          </div>
+        </div>
+        <div class="test-card info">
+          <h3>TC09: Filtrar por prioridad</h3>
+          <p>Verificar que el dropdown de filtros funciona.</p>
+          <div class="steps">
+            1. Crear tareas con diferentes prioridades<br>
+            2. Seleccionar "Alta" en el filtro priorityFilter<br>
+            3. Verificar que solo aparecen tareas Alta en la lista<br>
+            4. Cambiar a "Todas" y verificar que reaparecen todas
+          </div>
+        </div>
+        <div class="test-card info">
+          <h3>TC10: Filtrar por etiqueta</h3>
+          <p>Verificar filtrado combinado por etiqueta.</p>
+          <div class="steps">
+            1. Crear tareas con etiquetas diferentes (ej: "trabajo" y "personal")<br>
+            2. Seleccionar etiqueta "trabajo" en el filtro tagFilter<br>
+            3. Verificar que solo aparecen tareas con esa etiqueta<br>
+            4. Probar combinación: prioridad Alta + etiqueta trabajo
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 4: Calendario y Resumen</h2>
+      <div class="test-grid">
+        <div class="test-card info">
+          <h3>TC11: Tareas reflejan en calendario</h3>
+          <p>Verificar que las tareas aparecen en el calendario en su fecha límite.</p>
+          <div class="steps">
+            1. Crear tarea con fecha límite específica<br>
+            2. Revisar el calendario visual<br>
+            3. Verificar que el día correspondiente muestra un punto indicador<br>
+            4. Pasar el mouse sobre el día para ver conteo
+          </div>
+        </div>
+        <div class="test-card info">
+          <h3>TC12: Resumen 7 días</h3>
+          <p>Verificar que el resumen muestra tareas de los próximos 7 días.</p>
+          <div class="steps">
+            1. Crear tareas con fechas en diferentes días de la semana<br>
+            2. Revisar el panel "Resumen 7 Días"<br>
+            3. Verificar que los días con tareas tienen fondo morado transparente<br>
+            3. Contar que el número de tareas coincide con la lista principal
+          </div>
+        </div>
+        <div class="test-card info">
+          <h3>TC13: Navegación mes anterior/siguiente</h3>
+          <p>Verificar que los botones de navegación del calendario funcionan.</p>
+          <div class="steps">
+            1. Clic en flecha "prev" (mes anterior)<br>
+            2. Verificar que el mes y el año cambian<br>
+            3. Clic en flecha "next" (mes siguiente)<br>
+            4. Verificar navegación hacia adelante
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 5: Completado y Edición</h2>
+      <div class="test-grid">
+        <div class="test-card pass">
+          <h3>TC14: Marcar tarea como completada</h3>
+          <p>Verificar el tachado visual y movimiento al final.</p>
+          <div class="steps">
+            1. Crear tarea nueva<br>
+            2. Clic en el checkbox izquierdo de la tarea<br>
+            3. Verificar que el texto se tacha (line-through)<br>
+            4. Verificar que la tarea se mueve al final de la lista<br>
+            5. Verificar que el calendario refleja el cambio (ya no muestra punto)
+          </div>
+        </div>
+        <div class="test-card info">
+          <h3>TC15: Editar tarea existente</h3>
+          <p>Verificar que se pueden editar tareas creadas.</p>
+          <div class="steps">
+            1. Crear tarea con título "Tarea original"<br>
+            2. Clic en botón "Editar" de la tarea<br>
+            3. Modificar el título en el modal<br>
+            4. Guardar y verificar que el título se actualiza en la lista
+          </div>
+        </div>
+        <div class="test-card info">
+          <h3>TC16: Eliminar tarea</h3>
+          <p>Verificar que la eliminación funciona correctamente.</p>
+          <div class="steps">
+            1. Crear tarea nueva<br>
+            2. Clic en botón "Eliminar" de la tarea<br>
+            3. Confirmar la acción en el diálogo<br>
+            4. Verificar que la tarea desaparece de la lista<br>
+            5. Verificar que localStorage se actualiza
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 6: Persistencia y Atajos</h2>
+      <div class="test-grid">
+        <div class="test-card info">
+          <h3>TC17: Persistencia en localStorage</h3>
+          <p>Verificar que los datos persisten al cerrar y reabrir el navegador.</p>
+          <div class="steps">
+            1. Crear 3-4 tareas con diferentes prioridades y etiquetas<br>
+            2. Cerrar el navegador completamente<br>
+            3. Reabrir la app desde la misma URL<br>
+            4. Verificar que todas las tareas reaparecen exactamente como las dejaste
+          </div>
+        </div>
+        <div class="test-card info">
+          <h3>TC18: Atajo tecla 'N'</h3>
+          <p>Verificar atajo de teclado para nueva tarea.</p>
+          <div class="steps">
+            1. Estar en cualquier parte de la aplicación (fuera de modals abiertos)<br>
+            2. Presionar tecla 'N' en el teclado<br>
+            3. Verificar que se abre el modal de nueva tarea<br>
+            4. Verificar que el foco va al campo de título
+          </div>
+        </div>
+        <div class="test-card info">
+          <h3>TC19: Atajo tecla '/'</h3>
+          <p>Verificar atajo de teclado para foco en filtro.</p>
+          <div class="steps">
+            1. Estar en la aplicación principal<br>
+            2. Presionar tecla '/' en el teclado<br>
+            3. Verificar que el cursor enfoca el selector de etiquetas (tagFilter)<br>
+            4. Comenzar a escribir para filtrar
+          </div>
+        </div>
+        <div class="test-card info">
+          <h3>TC20: Atajo tecla 'Esc'</h3>
+          <p>Verificar atajo para cerrar modales.</p>
+          <div class="steps">
+            1. Tener el modal de nueva tarea abierto<br>
+            2. Presionar tecla 'Esc' en el teclado<br>
+            3. Verificar que el modal se cierra<br>
+            4. Verificar que el enfoque regresa a la aplicación principal
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 7: Backup y Import/Export JSON</h2>
+      <div class="test-grid">
+        <div class="test-card info">
+          <h3>TC21: Exportar datos a JSON</h3>
+          <p>Verificar que el botón de exportar descarga un archivo válido.</p>
+          <div class="steps">
+            1. Crear algunas tareas con datos completos<br>
+            2. Clic en botón "Exportar datos a JSON" (agregado en la interfaz)<br>
+            3. Verificar que se descarga un archivo .json<br>
+            5. Abrir el archivo en un editor de texto para verificar estructura JSON válida
+          </div>
+        </div>
+        <div class="test-card info">
+          <h3>TC22: Importar datos desde JSON</h3>
+          <p>Verificar que se pueden restaurar datos desde un archivo exportado.</p>
+          <div class="steps">
+            1. Exportar datos primero (Test TC21)<br>
+            2. Modificar o borrar algunas tareas en la app<br>
+            3. Clic en "Importar datos desde JSON"<br>
+            4. Seleccionar el archivo .json exportado anteriormente<br>
+            5. Verificar que todas las tareas reaparecen tal como estaban antes del export
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 8: Notificación Matutina</h2>
+      <div class="test-grid">
+        <div class="test-card info">
+          <h3>TC23: Banner 7:00 AM</h3>
+          <p>Verificar que el banner aparece automáticamente a las 7 AM.</p>
+          <div class="steps">
+            1. Verificar la hora actual del sistema<br>
+            2. Si es cercano a las 7:00 AM, la página debe mostrar el banner automaticamente<br>
+            3. Clic en botón "Simular aviso de las 7:00 AM" para probar manualmente<br>
+            4. Verificar que el banner tiene el diseño esperado (fondo morado, texto, botón)
+          </div>
+        </div>
+        <div class="test-card info">
+          <h3>TC24: Funcionalidad PWA</h3>
+          <p>Verificar que la app se puede añadir a pantalla de inicio.</p>
+          <div class="steps">
+            1. Abrir la app en Chrome o Edge móvil/desktop<br>
+            2. Usar menú "Añadir a la pantalla de inicio"<br>
+            3. Verificar que el icono aparece en el escritorio<br>
+            4. Abrir la app desde el icono y verificar que carga en modo standalone (sin barra de dirección)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 40px; padding: 20px; background: var(--bg-card); border-radius: 12px;">
+      <h3>📋 Instrucciones Generales de Testing</h3>
+      <ol>
+        <li>Abre la aplicación en: <code>index.html</code></li>
+        <li>Asegúrate de tener al menos 3 tareas creadas antes de empezar los tests</li>
+        <li>Usa la consola del desarrollador (F12) para ver errores JavaScript si algún test falla</li>
+        <li>Para tests de localStorage, asegúrate de no tener modo "Incógnito" estricto que lo bloquee</li>
+        <li>Los tests TC21 y TC22 requieren crear y seleccionar archivos .json</li>
+      </ol>
+      <p><strong>Expected Result:</strong> Todos los tests deberían pasar (status "pass").</p>
+      <p>Si algún test falla, revisa la consola F12 para errores y verifica que los archivos HTML/CSS/JS están correctamente vinculados.</p>
+    </div>
+  </div>
+</body>
+</html>
