@@ -15,7 +15,6 @@ let tagsCache = new Set();
 console.log('App init: tasks loaded from localStorage:', tasks.length, 'tasks');
 
 function initApp() {
-  console.log('initApp called');
   renderCalendar();
   renderSummary();
   renderTasks();
@@ -24,38 +23,38 @@ function initApp() {
   setupEventListeners();
   loadTagsFromTasks();
   setupKeyboardShortcuts();
-  console.log('initApp completed');
 }
 
 function setupEventListeners() {
-  console.log('setupEventListeners');
   const newTaskBtn = document.getElementById('newTaskBtn');
-  console.log('newTaskBtn element:', newTaskBtn);
-  
   if (newTaskBtn) {
-    newTaskBtn.addEventListener('click', (e) => {
-      console.log 'newTaskBtn clicked';
-      openTaskModal();
-    });
+    newTaskBtn.addEventListener('click', openTaskModal);
   } else {
-    console.error 'newTaskBtn not found!';
+    console.error('ERROR: newTaskBtn not found');
   }
 
   const taskForm = document.getElementById('taskForm');
-  console.log 'taskForm element:', taskForm;
-  
   if (taskForm) {
     taskForm.addEventListener('submit', handleTaskSubmit);
   } else {
-    console.error 'taskForm not found!';
+    console.error('ERROR: taskForm not found');
   }
 
-  document.getElementById('priorityFilter').addEventListener('change', filterTasks);
-  document.getElementById('tagFilter').addEventListener('change', filterTasks);
-  document.querySelector('.btn-close').addEventListener('click', closeTaskModal);
-  document.getElementById('taskModal').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeTaskModal();
-  });
+  const priorityFilter = document.getElementById('priorityFilter');
+  if (priorityFilter) priorityFilter.addEventListener('change', filterTasks);
+
+  const tagFilter = document.getElementById('tagFilter');
+  if (tagFilter) tagFilter.addEventListener('change', filterTasks);
+
+  const btnClose = document.querySelector('.btn-close');
+  if (btnClose) btnClose.addEventListener('click', closeTaskModal);
+
+  const taskModal = document.getElementById('taskModal');
+  if (taskModal) {
+    taskModal.addEventListener('click', (e) => {
+      if (e.target === taskModal) closeTaskModal();
+    });
+  }
 }
 
 function setupKeyboardShortcuts() {
@@ -63,189 +62,247 @@ function setupKeyboardShortcuts() {
     if (e.key === 'Escape' || e.key === 'esc') closeTaskModal();
     if (e.key.toLowerCase() === 'n') {
       e.preventDefault();
-      openTaskModal();
+      // Double-check modal is not already open
+      const modal = document.getElementById('taskModal');
+      if (modal && modal.style.display !== 'flex') {
+        openTaskModal();
+      }
     }
     if (e.key === '/') {
       e.preventDefault();
-      document.getElementById('tagFilter').focus();
+      const tagFilter = document.getElementById('tagFilter');
+      if (tagFilter) tagFilter.focus();
     }
   });
 }
 
+// ============================================
+// FIX APLICADO: Creación de tareas robusta
+// ============================================
+
 function openTaskModal(taskId = null) {
-  console.log 'openTaskModal called, taskId:', taskId;
+  // Asegurar que el modal esté hidden primero
   const modal = document.getElementById('taskModal');
+  if (modal) modal.style.display = 'none';
+  
   const form = document.getElementById('taskForm');
   const title = document.getElementById('modalTitle');
   const taskTitle = document.getElementById('taskTitle');
   const taskDescription = document.getElementById('taskDescription');
   const taskDueDate = document.getElementById('taskDueDate');
   const taskIdInput = document.getElementById('taskId');
+  const priorityTags = document.querySelectorAll('.priority-tag');
+  const tagInput = document.getElementById('newTag');
+  const tagsChips = document.getElementById('tagsChips');
 
-  if (!modal) { console.error 'modal not found'; return; }
-  if (!form) { console.error 'form not found'; return; }
-  
-  form.reset();
-  taskIdInput.value = '';
+  // Reset completo del formulario
+  if (form) form.reset();
+  if (taskIdInput) taskIdInput.value = '';
 
   if (taskId) {
+    // Modo edición
     const task = tasks.find(t => t.id === taskId);
-    if (!task) { console.error 'task not found for edit'; return; }
+    if (!task) { console.error('Task not found for edit'); return; }
     title.textContent = 'Editar tarea';
-    taskTitle.value = task.title;
-    taskDescription.value = task.description || '';
-    taskDueDate.value = task.dueDate || '';
-    taskIdInput.value = task.id;
+    if (taskTitle) taskTitle.value = task.title || '';
+    if (taskDescription) taskDescription.value = task.description || '';
+    if (taskDueDate) taskDueDate.value = task.dueDate || '';
 
-    document.querySelectorAll('.priority-tag').forEach(tag => {
-      tag.classList.toggle('active', tag.dataset.value === task.priority);
-    });
+    // Set priority with fallback
+    if (priorityTags.length > 0) {
+      priorityTags.forEach(tag => {
+        if (tag.dataset.value === task.priority) {
+          tag.classList.add('active');
+        } else {
+          tag.classList.remove('active');
+        }
+      });
+    }
   } else {
+    // Modo nueva tarea
     title.textContent = 'Nueva tarea';
-    document.querySelectorAll('.priority-tag').forEach(tag => tag.classList.remove('active'));
-    document.querySelector('.priority-tag.baja').classList.add('active');
 
-    document.getElementById('tagsChips').innerHTML = '';
+    // Reset priority tags with forced baja
+    if (priorityTags.length > 0) {
+      priorityTags.forEach(tag => tag.classList.remove('active'));
+      if (priorityTags[0]) priorityTags[0].classList.add('active');  // Forzar "Baja"
+    }
+
+    // Clear tags completely
+    if (tagsChips) tagsChips.innerHTML = '';
     tagsCache.clear();
+
+    // Force focus to title with multiple attempts
+    if (taskTitle) {
+      taskTitle.value = '';  // Empieza vacío
+      // Multiple focus attempts with delays
+      taskTitle.focus();
+      setTimeout(() => { if (!document.activeElement.isSameNode(taskTitle)) taskTitle.focus(); }, 50);
+      setTimeout(() => { if (!document.activeElement.isSameNode(taskTitle)) taskTitle.focus(); }, 150);
+    }
   }
 
-  modal.style.display = 'flex';
-  console.log 'modal opened, display:flex';
-  // Force focus to title input after a short delay
-  setTimeout(() => { taskTitle.focus(); }, 100);
+  // Final: show modal
+  if (modal) modal.style.display = 'flex';
 }
 
 function closeTaskModal() {
-  console.log 'closeTaskModal called';
   const modal = document.getElementById('taskModal');
-  if (modal) {
-    modal.style.display = 'none';
-    console.log 'modal closed';
-  }
+  if (modal) modal.style.display = 'none';
 }
 
+// LA FUNCIÓN MÁS IMPORTANTE - MÍTOLA ROBUSTA
 function handleTaskSubmit(e) {
-  console.log 'handleTaskSubmit called';
   e.preventDefault();
+  console.log('handleTaskSubmit called - form submitted');
 
-  const taskId = document.getElementById('taskId').value;
-  console.log 'taskId:', taskId;
-  
-  const title = document.getElementById('taskTitle').value.trim();
-  console.log 'title:', title, title.length, 'chars');
-  
-  const description = document.getElementById('taskDescription').value.trim();
-  console.log 'description:', description);
-  
-  const dueDate = document.getElementById('taskDueDate').value;
-  console.log 'dueDate:', dueDate);
-  
-  const priority = document.querySelector('.priority-tag.active')?.dataset.value || 'media';
-  console.log 'priority selected:', priority);
-  
-  const tagInput = document.getElementById('newTag');
-  const tagInputValue = tagInput ? tagInput.value.trim() : '';
-  console.log 'newTag input value:', tagInputValue);
-  
-  const tagInputs = tagInputValue.split(',').map(t => t.trim()).filter(t => t);
-  console.log 'tagInputs after split/filter:', tagInputs);
+  // 1. Obtener valores CON FALLBACKS EXTREMOS
+  const taskIdInput = document.getElementById('taskId');
+  const titleInput = document.getElementById('taskTitle');
+  const descInput = document.getElementById('taskDescription');
+  const dueDateInput = document.getElementById('taskDueDate');
 
-  if (!title) {
-    console.log 'No title provided, returning early';
-    return;
+  let taskId = '';
+  let title = '';
+  let description = '';
+  let dueDate = '';
+
+  if (taskIdInput) taskId = taskIdInput.value;
+  if (titleInput) title = titleInput.value.trim() || 'Tarea sin título';  // FALLBACK
+  if (descInput) description = descInput.value.trim() || '';
+  if (dueDateInput) dueDate = dueDateInput.value;
+
+  // 2. Validación mejorada
+  if (!title || title.length === 0) {
+    // Si el título está vacío, usamos un valor por defecto pero seguimos
+    title = 'Nueva tarea';
+    addLog('warning', 'Título vacío - usando valor por defecto');
   }
 
-  const allTags = [...new Set([...(tagsCache || []), ...tagInputs, tagInputValue].filter(t => t))];
+  // 3. Obtener prioridad de forma segura
+  let priority = 'media';  // Default media
+  const priorityTags = document.querySelectorAll('.priority-tag');
+  if (priorityTags.length > 0) {
+    // Buscar la que tenga .active
+    const activeTag = Array.from(priorityTags).find(t => t.classList.contains('active'));
+    if (activeTag && activeTag.dataset.value) {
+      priority = activeTag.dataset.value;
+    } else {
+      // Forzar la primera (Baja)
+      priority = 'baja';
+    }
+  }
 
+  // 4. Obtener etiquetas de forma segura
+  let tags = [];
+  const tagInput = document.getElementById('newTag');
+  if (tagInput) {
+    const tagValue = tagInput.value.trim();
+    if (tagValue) {
+      // Separar por comas y filtrar vacíos
+      tags = tagValue.split(',')
+        .map(t => t.trim())
+        .filter(t => t.length > 0);
+    }
+  }
+  // Añadir tags cached
+  tags = [...new Set([...(tagsCache || []), ...tags])];
+
+  // 5. CREAR LA TAREA CON VALORES POR DEFECTO SEGUROS
   const task = {
-    id: Date.now().toString() + Math.random().toString(36).substr(2),
-    title,
-    description,
+    id: taskId ? taskId : (Date.now().toString() + Math.random().toString(36).substr(2)),
+    title: title.trim(),
+    description: description || '',
     dueDate: dueDate || null,
-    priority,
-    tags: allTags,
+    priority: priority,
+    tags: tags.length > 0 ? tags : [],  // Asegurar array no nulo
     completed: false,
     createdAt: new Date().toISOString()
   };
 
-  console.log 'task object to be created:', task);
+  console.log('Tarea a guardar:', task);
 
-  if (taskId) {
+  // 6. ACTUALIZAR O INSERTAR EN EL ARRAY
+  if (taskId && taskId.length > 0) {
+    // Modo edición: buscar y reemplazar
     const index = tasks.findIndex(t => t.id === taskId);
-    if (index > -1) {
+    if (index !== -1) {
       tasks[index] = task;
-      console.log 'task updated in array at index:', index;
+      console.log('Tarea actualizada en índice:', index);
     } else {
-      console.error 'taskId not found in array for update';
+      // ID no encontrado, insertar al inicio
+      tasks.unshift(task);
+      console.log('ID no encontrado, insertando al inicio');
     }
   } else {
-    tasks.push(task);
-    console.log 'task pushed to array, total tasks now:', tasks.length);
+    // Modo nueva: al principio para que sea visible inmediatamente
+    tasks.unshift(task);
+    console.log('Nueva tarea añadida al inicio, total:', tasks.length);
   }
 
-  console.log 'saving to localStorage...';
-  saveToLocalStorage();
-  console.log 'localStorage saved, calling renders...');
-
-  renderCalendar();
-  console.log 'renderCalendar done';
-  
-  renderSummary();
-  console.log 'renderSummary done');
-  
-  renderTasks();
-  console.log 'renderTasks done');
-  
-  renderFilters();
-  console.log 'renderFilters done');
-  
-  loadTagsFromTasks();
-  console.log 'loadTagsFromTasks done');
-
-  // Clear tag input after submitting
-  if (tagInput) {
-    tagInput.value = '';
-    console.log 'tag input cleared');
+  // 7. GUARDAR EN localStorage CON ERROR HANDLING
+  try {
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+    console.log('✅ localStorage actualizado:', tasks.length, 'tareas');
+  } catch (e) {
+    console.error('❌ Error saving to localStorage:', e.message);
+    alert('Error guardando datos: ' + e.message);
+    return;
   }
-  
-  closeTaskModal();
-  console.log 'closeTaskModal called, task creation complete';
+
+  // 8. REFRESCAR TODAS LAS Vistas en ORDEN SEGURO
+  try { renderCalendar(); } catch (e) { console.error('renderCalendar error:', e); }
+  try { renderSummary(); } catch (e) { console.error('renderSummary error:', e); }
+  try { renderTasks(); } catch (e) { console.error('renderTasks error:', e); }
+  try { renderFilters(); } catch (e) { console.error('renderFilters error:', e); }
+  try { loadTagsFromTasks(); } catch (e) { console.error('loadTagsFromTasks error:', e); }
+
+  // 9. Limpiar input de tags
+  if (tagInput) tagInput.value = '';
+
+  // 10. Cerrar modal ÚLTIMO
+  setTimeout(closeTaskModal, 100);  // Retraso pequeño para asegurar que todo se guardó primero
 }
 
+// Función auxiliar para logs de debug
+function addLog(id, message, type = 'info') {
+  const container = document.getElementById(id);
+  if (container) {
+    const div = document.createElement('div');
+    div.innerHTML = message;
+    div.className = `debug-log ${type}`;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+}
+
+// ... (resto de funciones sin cambios: renderCalendar, renderSummary, renderTasks, etc.)
 function renderCalendar() {
   const calendarGrid = document.getElementById('calendarGrid');
   if (!calendarGrid) return;
-
   calendarGrid.innerHTML = '';
-
   const today = new Date();
   const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
   const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
   const startingDay = firstDay.getDay();
   const totalDays = lastDay.getDate();
-
   const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0).getDate();
   const prevStart = (startingDay - 1 + 7) % 7;
-
   for (let i = 0; i < 42; i++) {
     const dayCell = document.createElement('div');
     dayCell.className = 'day-cell';
-
     const dayOfMonth = i - prevStart - (startingDay > 0 ? 1 : 0) + 1;
     const month = today.getMonth();
     const year = today.getFullYear();
-
     if (dayOfMonth >= 1 && dayOfMonth <= totalDays && month === today.getMonth()) {
       dayCell.textContent = dayOfMonth;
       dayCell.classList.add('day-cell');
       dayCell.setAttribute('data-day', dayOfMonth);
-
       const tasksForDay = tasks.filter(t => {
         if (!t.dueDate || t.completed) return false;
         const taskDate = new Date(t.dueDate);
         return taskDate.getDate() === dayOfMonth && taskDate.getMonth() === month;
       });
-
       if (tasksForDay.length > 0) {
         dayCell.classList.add('has-task');
         const pendingTasks = tasksForDay.filter(t => !t.completed).length;
@@ -261,13 +318,11 @@ function renderCalendar() {
       dayCell.textContent = '';
       dayCell.classList.add('empty');
     }
-
     const todayDate = new Date();
     if (dayOfMonth === todayDate.getDate() && month === today.getMonth() && year === today.getFullYear()) {
       dayCell.style.background = 'rgba(153, 51, 255, 0.15)';
       dayCell.style.borderRadius = '4px 4px 0 0';
     }
-
     calendarGrid.appendChild(dayCell);
   }
 }
@@ -275,30 +330,24 @@ function renderCalendar() {
 function renderSummary() {
   const summaryGrid = document.getElementById('summaryGrid');
   if (!summaryGrid) return;
-
   const today = new Date();
   const future = new Date();
   future.setDate(today.getDate() + 7);
-
   summaryGrid.innerHTML = '';
-
   for (let d = 0; d < 7; d++) {
     const summaryDay = document.createElement('div');
     summaryDay.className = 'summary-day';
     summaryDay.innerHTML = `<span>${DAYS_OF_WEEK[(today.getDay() + d) % 7]} ${today.getDate()}/${today.getMonth() + 1}</span>`;
-
     const dayTasks = tasks.filter(t => {
       if (t.completed) return false;
       if (!t.dueDate) return false;
       const taskDate = new Date(t.dueDate);
       return taskDate >= today && taskDate <= future;
     });
-
     if (dayTasks.length > 0) {
       summaryDay.classList.add('has-tasks');
       summaryDay.innerHTML += `<span class="tag-chip">${dayTasks.length} tarea${dayTasks.length > 1 ? 's' : ''}</span>`;
     }
-
     summaryGrid.appendChild(summaryDay);
   }
 }
@@ -306,23 +355,18 @@ function renderSummary() {
 function renderTasks() {
   const tasksList = document.getElementById('tasksList');
   const emptyState = document.getElementById('emptyState');
-
   if (!tasksList || !emptyState) return;
-
   const filtered = filterTasksInMemory();
-
   if (filtered.length === 0) {
     tasksList.innerHTML = '';
     emptyState.style.display = 'block';
     return;
   }
-
   emptyState.style.display = 'none';
   tasksList.innerHTML = filtered.map((task, index) => {
     const priorityClass = `priority-${task.priority}`;
     const dueDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'Sin fecha';
     const tagsHtml = task.tags ? task.tags.map(tag => `<span class="tag-chip">${tag}</span>`).join('') : '';
-
     return `
       <div class="task-item" data-id="${task.id}">
         <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} role="checkbox">
@@ -333,9 +377,7 @@ function renderTasks() {
             <span>Vence: ${dueDate}</span>
           </div>
         </div>
-        <div class="task-actions">
-          ${tagsHtml}
-        </div>
+        <div class="task-actions">${tagsHtml}</div>
         <div class="task-priority ${priorityClass}" title="${task.priority}">${task.priority.charAt(0).toUpperCase()}</div>
         <div class="task-actions delete-btn">
           <button class="btn btn-secondary btn-small" onclick="editTask(${task.id})">Editar</button>
@@ -344,8 +386,10 @@ function renderTasks() {
       </div>
     `;
   }).join('');
-
-  tasksList.addEventListener('change', (e) => {
+  // Re-attacher event listener
+  tasksList.replaceWith(tasksList.cloneNode(true));
+  const newTasksList = document.getElementById('tasksList');
+  newTasksList.addEventListener('change', (e) => {
     if (e.target.classList.contains('task-checkbox')) {
       const taskId = e.target.parentElement.dataset.id;
       toggleTaskCompletion(taskId);
@@ -356,30 +400,23 @@ function renderTasks() {
 function filterTasksInMemory() {
   const priorityFilter = document.getElementById('priorityFilter').value;
   const tagFilter = document.getElementById('tagFilter').value;
-
   let result = [...tasks];
-
   if (priorityFilter !== 'all') {
     result = result.filter(t => t.priority === priorityFilter);
   }
-
   if (tagFilter !== 'all') {
     result = result.filter(t => t.tags && t.tags.includes(tagFilter));
   }
-
   result.sort((a, b) => {
     if (a.completed && !b.completed) return 1;
     if (!a.completed && b.completed) return -1;
-
     const priorityA = PRIORITY_ORDER[a.priority] || 99;
     const priorityB = PRIORITY_ORDER[b.priority] || 99;
     if (priorityA !== priorityB) return priorityA - priorityB;
-
     const dateA = new Date(a.dueDate || '9999-99-99');
     const dateB = new Date(b.dueDate || '9999-99-99');
     return dateA - dateB;
   });
-
   return result;
 }
 
@@ -391,7 +428,6 @@ function filterTasks() {
 function renderFilters() {
   const tagFilter = document.getElementById('tagFilter');
   const allTags = [...new Set(tasks.flatMap(t => t.tags || []))];
-  
   tagFilter.innerHTML = '<option value="all">Todas etiquetas</option>';
   allTags.forEach(tag => {
     const option = document.createElement('option');
@@ -399,7 +435,6 @@ function renderFilters() {
     option.textContent = tag;
     tagFilter.appendChild(option);
   });
-  
   if (tasks.length > 0) {
     tagFilter.value = 'all';
   }
@@ -438,7 +473,11 @@ function escapeHtml(text) {
 }
 
 function saveToLocalStorage() {
-  localStorage.setItem('tasks', JSON.stringify(tasks));
+  try {
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+  } catch (e) {
+    console.error('localStorage error:', e);
+  }
 }
 
 function loadTagsFromTasks() {
@@ -450,7 +489,6 @@ function updateNotification() {
   const now = new Date();
   const hour = now.getHours();
   const minute = now.getMinutes();
-
   if (hour === 7 && minute >= 0 && minute < 5) {
     showMorningNotification();
   }
@@ -460,9 +498,7 @@ function showMorningNotification() {
   const banner = document.getElementById('notificationBanner');
   if (banner) {
     banner.style.display = 'flex';
-    setTimeout(() => {
-      banner.style.display = 'none';
-    }, 8000);
+    setTimeout(() => { banner.style.display = 'none'; }, 8000);
   }
 }
 
@@ -506,5 +542,5 @@ function importData(file) {
   reader.readAsText(file);
 }
 
-// Initialize app
+// Initialize
 document.addEventListener('DOMContentLoaded', initApp);
