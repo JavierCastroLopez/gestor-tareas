@@ -16,11 +16,6 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(clients.claim());
 });
 
-// Interceptar peticiones de red - simplemente reenviar a la red
-self.addEventListener('fetch', (event) => {
-  event.respondWith(fetch(event.request));
-});
-
 // Verificación periódica de tareas vencidas
 let checkInterval = null;
 

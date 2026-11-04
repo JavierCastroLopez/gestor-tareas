@@ -769,6 +769,12 @@ function importData(file) {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
+  // Desregistrar Service Workers antiguos para evitar conflictos de caché
+  if ('serviceWorker' in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    registrations.forEach(reg => reg.unregister());
+  }
+
   // Cargar tareas desde IndexedDB si localStorage está vacío
   if (tasks.length === 0 && 'indexedDB' in window) {
     try {
