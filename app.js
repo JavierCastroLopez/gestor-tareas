@@ -12,7 +12,10 @@ const PRIORITY_ORDER = { baja: 0, media: 1, alta: 2, urgente: 3 };
 let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
 let tagsCache = new Set();
 
+console.log('App init: tasks loaded from localStorage:', tasks.length, 'tasks');
+
 function initApp() {
+  console.log('initApp called');
   renderCalendar();
   renderSummary();
   renderTasks();
@@ -21,11 +24,32 @@ function initApp() {
   setupEventListeners();
   loadTagsFromTasks();
   setupKeyboardShortcuts();
+  console.log('initApp completed');
 }
 
 function setupEventListeners() {
-  document.getElementById('newTaskBtn').addEventListener('click', openTaskModal);
-  document.getElementById('taskForm').addEventListener('submit', handleTaskSubmit);
+  console.log('setupEventListeners');
+  const newTaskBtn = document.getElementById('newTaskBtn');
+  console.log('newTaskBtn element:', newTaskBtn);
+  
+  if (newTaskBtn) {
+    newTaskBtn.addEventListener('click', (e) => {
+      console.log 'newTaskBtn clicked';
+      openTaskModal();
+    });
+  } else {
+    console.error 'newTaskBtn not found!';
+  }
+
+  const taskForm = document.getElementById('taskForm');
+  console.log 'taskForm element:', taskForm;
+  
+  if (taskForm) {
+    taskForm.addEventListener('submit', handleTaskSubmit);
+  } else {
+    console.error 'taskForm not found!';
+  }
+
   document.getElementById('priorityFilter').addEventListener('change', filterTasks);
   document.getElementById('tagFilter').addEventListener('change', filterTasks);
   document.querySelector('.btn-close').addEventListener('click', closeTaskModal);
@@ -49,6 +73,7 @@ function setupKeyboardShortcuts() {
 }
 
 function openTaskModal(taskId = null) {
+  console.log 'openTaskModal called, taskId:', taskId;
   const modal = document.getElementById('taskModal');
   const form = document.getElementById('taskForm');
   const title = document.getElementById('modalTitle');
@@ -57,20 +82,21 @@ function openTaskModal(taskId = null) {
   const taskDueDate = document.getElementById('taskDueDate');
   const taskIdInput = document.getElementById('taskId');
 
+  if (!modal) { console.error 'modal not found'; return; }
+  if (!form) { console.error 'form not found'; return; }
+  
   form.reset();
   taskIdInput.value = '';
 
   if (taskId) {
     const task = tasks.find(t => t.id === taskId);
-    if (!task) return;
-
+    if (!task) { console.error 'task not found for edit'; return; }
     title.textContent = 'Editar tarea';
     taskTitle.value = task.title;
     taskDescription.value = task.description || '';
     taskDueDate.value = task.dueDate || '';
     taskIdInput.value = task.id;
 
-    // Set priority
     document.querySelectorAll('.priority-tag').forEach(tag => {
       tag.classList.toggle('active', tag.dataset.value === task.priority);
     });
@@ -79,33 +105,57 @@ function openTaskModal(taskId = null) {
     document.querySelectorAll('.priority-tag').forEach(tag => tag.classList.remove('active'));
     document.querySelector('.priority-tag.baja').classList.add('active');
 
-    // Clear tags
     document.getElementById('tagsChips').innerHTML = '';
     tagsCache.clear();
   }
 
   modal.style.display = 'flex';
+  console.log 'modal opened, display:flex';
+  // Force focus to title input after a short delay
+  setTimeout(() => { taskTitle.focus(); }, 100);
 }
 
 function closeTaskModal() {
-  document.getElementById('taskModal').style.display = 'none';
+  console.log 'closeTaskModal called';
+  const modal = document.getElementById('taskModal');
+  if (modal) {
+    modal.style.display = 'none';
+    console.log 'modal closed';
+  }
 }
 
 function handleTaskSubmit(e) {
+  console.log 'handleTaskSubmit called';
   e.preventDefault();
 
   const taskId = document.getElementById('taskId').value;
+  console.log 'taskId:', taskId;
+  
   const title = document.getElementById('taskTitle').value.trim();
+  console.log 'title:', title, title.length, 'chars');
+  
   const description = document.getElementById('taskDescription').value.trim();
+  console.log 'description:', description);
+  
   const dueDate = document.getElementById('taskDueDate').value;
+  console.log 'dueDate:', dueDate);
+  
   const priority = document.querySelector('.priority-tag.active')?.dataset.value || 'media';
-  const tagInputValue = document.getElementById('newTag').value.trim();
+  console.log 'priority selected:', priority);
+  
+  const tagInput = document.getElementById('newTag');
+  const tagInputValue = tagInput ? tagInput.value.trim() : '';
+  console.log 'newTag input value:', tagInputValue);
+  
   const tagInputs = tagInputValue.split(',').map(t => t.trim()).filter(t => t);
-  const newTag = tagInputValue ? tagInputValue : '';
+  console.log 'tagInputs after split/filter:', tagInputs);
 
-  if (!title) return;
+  if (!title) {
+    console.log 'No title provided, returning early';
+    return;
+  }
 
-  const allTags = [...new Set([...(tagsCache || []), ...tagInputs, newTag].filter(t => t))];
+  const allTags = [...new Set([...(tagsCache || []), ...tagInputs, tagInputValue].filter(t => t))];
 
   const task = {
     id: Date.now().toString() + Math.random().toString(36).substr(2),
@@ -118,24 +168,48 @@ function handleTaskSubmit(e) {
     createdAt: new Date().toISOString()
   };
 
+  console.log 'task object to be created:', task);
+
   if (taskId) {
     const index = tasks.findIndex(t => t.id === taskId);
-    if (index > -1) tasks[index] = task;
+    if (index > -1) {
+      tasks[index] = task;
+      console.log 'task updated in array at index:', index;
+    } else {
+      console.error 'taskId not found in array for update';
+    }
   } else {
     tasks.push(task);
+    console.log 'task pushed to array, total tasks now:', tasks.length);
   }
 
+  console.log 'saving to localStorage...';
   saveToLocalStorage();
+  console.log 'localStorage saved, calling renders...');
+
   renderCalendar();
-  renderSummary();
-  renderTasks();
-  renderFilters();
-  loadTagsFromTasks();
+  console.log 'renderCalendar done';
   
+  renderSummary();
+  console.log 'renderSummary done');
+  
+  renderTasks();
+  console.log 'renderTasks done');
+  
+  renderFilters();
+  console.log 'renderFilters done');
+  
+  loadTagsFromTasks();
+  console.log 'loadTagsFromTasks done');
+
   // Clear tag input after submitting
-  document.getElementById('newTag').value = '';
+  if (tagInput) {
+    tagInput.value = '';
+    console.log 'tag input cleared');
+  }
   
   closeTaskModal();
+  console.log 'closeTaskModal called, task creation complete';
 }
 
 function renderCalendar() {
@@ -150,11 +224,9 @@ function renderCalendar() {
   const startingDay = firstDay.getDay();
   const totalDays = lastDay.getDate();
 
-  // Previous month days
   const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0).getDate();
   const prevStart = (startingDay - 1 + 7) % 7;
 
-  // Fill all days of the grid (6 weeks * 7 days = 42 cells)
   for (let i = 0; i < 42; i++) {
     const dayCell = document.createElement('div');
     dayCell.className = 'day-cell';
@@ -168,7 +240,6 @@ function renderCalendar() {
       dayCell.classList.add('day-cell');
       dayCell.setAttribute('data-day', dayOfMonth);
 
-      // Find tasks for this day
       const tasksForDay = tasks.filter(t => {
         if (!t.dueDate || t.completed) return false;
         const taskDate = new Date(t.dueDate);
@@ -191,7 +262,6 @@ function renderCalendar() {
       dayCell.classList.add('empty');
     }
 
-    // Highlight today
     const todayDate = new Date();
     if (dayOfMonth === todayDate.getDate() && month === today.getMonth() && year === today.getFullYear()) {
       dayCell.style.background = 'rgba(153, 51, 255, 0.15)';
@@ -289,28 +359,22 @@ function filterTasksInMemory() {
 
   let result = [...tasks];
 
-  // Filter by priority
   if (priorityFilter !== 'all') {
     result = result.filter(t => t.priority === priorityFilter);
   }
 
-  // Filter by tag
   if (tagFilter !== 'all') {
     result = result.filter(t => t.tags && t.tags.includes(tagFilter));
   }
 
-  // Sort: completed first, then by priority, then by date
   result.sort((a, b) => {
-    // Completed tasks al final
     if (a.completed && !b.completed) return 1;
     if (!a.completed && b.completed) return -1;
 
-    // By priority
     const priorityA = PRIORITY_ORDER[a.priority] || 99;
     const priorityB = PRIORITY_ORDER[b.priority] || 99;
     if (priorityA !== priorityB) return priorityA - priorityB;
 
-    // By date
     const dateA = new Date(a.dueDate || '9999-99-99');
     const dateB = new Date(b.dueDate || '9999-99-99');
     return dateA - dateB;
@@ -336,7 +400,6 @@ function renderFilters() {
     tagFilter.appendChild(option);
   });
   
-  // Si hay tareas, seleccionar "Todas" como default, si no ocultar el filtro
   if (tasks.length > 0) {
     tagFilter.value = 'all';
   }
@@ -388,7 +451,6 @@ function updateNotification() {
   const hour = now.getHours();
   const minute = now.getMinutes();
 
-  // Check if it's 7:00 AM exactly or close to it
   if (hour === 7 && minute >= 0 && minute < 5) {
     showMorningNotification();
   }
@@ -446,25 +508,3 @@ function importData(file) {
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', initApp);
-
-// Export/Import buttons
-document.addEventListener('DOMContentLoaded', () => {
-  const exportBtn = document.createElement('button');
-  exportBtn.className = 'btn btn-secondary';
-  exportBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Exportar JSON';
-  exportBtn.onclick = exportData;
-  document.querySelector('.app-actions').insertBefore(exportBtn, document.querySelector('.btn-settings'));
-
-  const importBtn = document.createElement('button');
-  importBtn.className = 'btn btn-secondary';
-  importBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 3a2 2 0 012 2v7M7 12l5 5v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7l5-5M7 20l5-5v-7"/></svg> Importar JSON';
-  importBtn.onclick = () => document.getElementById('importFile').click();
-  document.querySelector('.app-actions').insertBefore(importBtn, document.querySelector('.btn-settings'));
-
-  const importInput = document.createElement('input');
-  importInput.type = 'file';
-  importInput.id = 'importFile';
-  importInput.accept = '.json';
-  importInput.style.display = 'none';
-  document.body.appendChild(importInput);
-});
