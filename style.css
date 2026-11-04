@@ -253,7 +253,7 @@ body {
   border-color: var(--accent-primary);
 }
 
-.task-checkbox:checked + .task-title {
+.task-checkbox:checked ~ .task-info .task-title {
   text-decoration: line-through;
   color: var(--text-secondary);
 }

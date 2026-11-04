@@ -1,0 +1,28 @@
+{
+  "name": "gestortareas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test:unit": "jest --testPathPattern=unit --verbose",
+    "test:e2e": "playwright test --project=firefox",
+    "test": "jest --testPathPattern=unit && playwright test --project=firefox"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JavierCastroLopez/gestor-tareas.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/JavierCastroLopez/gestor-tareas/issues"
+  },
+  "homepage": "https://github.com/JavierCastroLopez/gestor-tareas#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "jest": "^30.5.2",
+    "jest-environment-jsdom": "^30.5.2"
+  }
+}

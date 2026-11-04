@@ -136,11 +136,12 @@ function openTaskModal(taskId = null) {
     if (task) {
       // Tarea encontrada - cargar datos en el formulario
       title.textContent = 'Editar tarea';
+      if (taskIdInput) taskIdInput.value = task.id;
       if (taskTitle) taskTitle.value = task.title || '';
       if (taskDescription) taskDescription.value = task.description || '';
       if (taskDueDate) taskDueDate.value = task.dueDate || '';
 
-      // Set priority with fallback
+      // Set priority based on task.priority
       if (priorityTags.length > 0) {
         priorityTags.forEach(tag => {
           if (tag.dataset.value === task.priority) {
@@ -153,40 +154,45 @@ function openTaskModal(taskId = null) {
     } else {
       // Tarea NO encontrada - fallback a modo nueva tarea
       console.warn('Tarea no encontrada para editar - iniciando nueva tarea');
-      // No hacer return, continuar con el modo nueva tarea abajo
     }
   }
-  
-  // Modo nueva tarea (siempre se ejecuta si no hay taskId o si task no fue encontrado)
-  title.textContent = 'Nueva tarea';
 
-  // Reset priority tags with forced baja
-  if (priorityTags.length > 0) {
-    priorityTags.forEach(tag => tag.classList.remove('active'));
-    if (priorityTags[0]) priorityTags[0].classList.add('active');  // Forzar "Baja"
+  if (!taskId || !tasks.find(t => t.id === taskId)) {
+    // Modo nueva tarea (solo si no estamos editando una tarea existente)
+    title.textContent = 'Nueva tarea';
+
+    // Reset priority tags with forced baja
+    if (priorityTags.length > 0) {
+      priorityTags.forEach(tag => tag.classList.remove('active'));
+      if (priorityTags[0]) priorityTags[0].classList.add('active');  // Forzar "Baja"
+    }
+
+    // Clear tags completely
+    if (tagsChips) tagsChips.innerHTML = '';
+    tagsCache.clear();
+
+    // Force focus to title with multiple attempts
+    if (taskTitle) {
+      taskTitle.value = '';  // Empieza vacío
+      // Multiple focus attempts with delays
+      taskTitle.focus();
+      setTimeout(() => { if (!document.activeElement.isSameNode(taskTitle)) taskTitle.focus(); }, 50);
+      setTimeout(() => { if (!document.activeElement.isSameNode(taskTitle)) taskTitle.focus(); }, 150);
+    }
   }
 
-  // Clear tags completely
-  if (tagsChips) tagsChips.innerHTML = '';
-  tagsCache.clear();
-
-  // Force focus to title with multiple attempts
-  if (taskTitle) {
-    taskTitle.value = '';  // Empieza vacío
-    // Multiple focus attempts with delays
-    taskTitle.focus();
-    setTimeout(() => { if (!document.activeElement.isSameNode(taskTitle)) taskTitle.focus(); }, 50);
-    setTimeout(() => { if (!document.activeElement.isSameNode(taskTitle)) taskTitle.focus(); }, 150);
-  }
-}
-
-// Final: show modal
-if (modal) modal.style.display = 'flex';
+  // Final: show modal
+  if (modal) modal.style.display = 'flex';
 }
 
 function closeTaskModal() {
   const modal = document.getElementById('taskModal');
   if (modal) modal.style.display = 'none';
+}
+
+function selectPriority(tag) {
+  document.querySelectorAll('.priority-tag').forEach(t => t.classList.remove('active'));
+  tag.classList.add('active');
 }
 
 // LA FUNCIÓN MÁS IMPORTANTE - MÍTOLA ROBUSTA
@@ -336,7 +342,8 @@ function renderCalendar() {
       dayCell.textContent = dayOfMonth;
       dayCell.classList.add('day-cell');
       dayCell.setAttribute('data-day', dayOfMonth);
-      const tasksForDay = tasks.filter(t => {
+      const taskList = window.tasks || tasks;
+      const tasksForDay = taskList.filter(t => {
         if (!t.dueDate || t.completed) return false;
         const taskDate = new Date(t.dueDate);
         return taskDate.getDate() === dayOfMonth && taskDate.getMonth() === month;
@@ -376,7 +383,8 @@ function renderSummary() {
     const summaryDay = document.createElement('div');
     summaryDay.className = 'summary-day';
     summaryDay.innerHTML = `<span>${DAYS_OF_WEEK[(today.getDay() + d) % 7]} ${today.getDate()}/${today.getMonth() + 1}</span>`;
-    const dayTasks = tasks.filter(t => {
+    const taskList = window.tasks || tasks;
+    const dayTasks = taskList.filter(t => {
       if (t.completed) return false;
       if (!t.dueDate) return false;
       const taskDate = new Date(t.dueDate);
@@ -418,7 +426,7 @@ function renderTasks() {
         <div class="task-actions">${tagsHtml}</div>
         <div class="task-priority ${priorityClass}" title="${task.priority}">${task.priority.charAt(0).toUpperCase()}</div>
         <div class="task-actions delete-btn">
-          <button class="btn btn-secondary btn-small" onclick="editTask(${task.id})">Editar</button>
+          <button class="btn btn-secondary btn-small" onclick="editTask('${task.id}')">Editar</button>
           <button class="btn btn-secondary btn-small" onclick="deleteTask('${task.id}')">Eliminar</button>
         </div>
       </div>
@@ -436,9 +444,10 @@ function renderTasks() {
 }
 
 function filterTasksInMemory() {
+  const taskList = window.tasks || [];
   const priorityFilter = document.getElementById('priorityFilter').value;
   const tagFilter = document.getElementById('tagFilter').value;
-  let result = [...tasks];
+  let result = [...taskList];
   if (priorityFilter !== 'all') {
     result = result.filter(t => t.priority === priorityFilter);
   }
@@ -448,9 +457,9 @@ function filterTasksInMemory() {
   result.sort((a, b) => {
     if (a.completed && !b.completed) return 1;
     if (!a.completed && b.completed) return -1;
-    const priorityA = PRIORITY_ORDER[a.priority] || 99;
-    const priorityB = PRIORITY_ORDER[b.priority] || 99;
-    if (priorityA !== priorityB) return priorityA - priorityB;
+    const priorityA = PRIORITY_ORDER[a.priority] !== undefined ? PRIORITY_ORDER[a.priority] : 99;
+    const priorityB = PRIORITY_ORDER[b.priority] !== undefined ? PRIORITY_ORDER[b.priority] : 99;
+    if (priorityA !== priorityB) return priorityB - priorityA;
     const dateA = new Date(a.dueDate || '9999-99-99');
     const dateB = new Date(b.dueDate || '9999-99-99');
     return dateA - dateB;
@@ -479,9 +488,10 @@ function renderFilters() {
 }
 
 function toggleTaskCompletion(taskId) {
-  const index = tasks.findIndex(t => t.id === taskId);
+  const taskList = window.tasks || tasks;
+  const index = taskList.findIndex(t => t.id === taskId);
   if (index > -1) {
-    tasks[index].completed = !tasks[index].completed;
+    taskList[index].completed = !taskList[index].completed;
     saveToLocalStorage();
     renderCalendar();
     renderSummary();
@@ -513,13 +523,15 @@ function escapeHtml(text) {
 function saveToLocalStorage() {
   try {
     localStorage.setItem('tasks', JSON.stringify(tasks));
+    window.tasks = tasks;
   } catch (e) {
     console.error('localStorage error:', e);
   }
 }
 
 function loadTagsFromTasks() {
-  tagsCache = new Set(tasks.flatMap(t => t.tags || []));
+  const taskList = window.tasks || tasks;
+  tagsCache = new Set(taskList.flatMap(t => t.tags || []));
   renderFilters();
 }
 
@@ -608,5 +620,16 @@ document.addEventListener('DOMContentLoaded', () => {
   importInput.style.display = 'none';
   document.body.appendChild(importInput);
 });
+
+// Exponer API para tests unitarios
+window.PRIORITY_COLORS = PRIORITY_COLORS;
+window.PRIORITY_ORDER = PRIORITY_ORDER;
+window.DAYS_OF_WEEK = DAYS_OF_WEEK;
+window.tasks = tasks;
+window.escapeHtml = escapeHtml;
+window.filterTasksInMemory = filterTasksInMemory;
+window.toggleTaskCompletion = toggleTaskCompletion;
+window.deleteTask = deleteTask;
+window.editTask = editTask;
 
 document.addEventListener('DOMContentLoaded', initApp);
