@@ -78,8 +78,15 @@ function setupEventListeners() {
 
 function setupKeyboardShortcuts() {
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' || e.key === 'esc') closeTaskModal();
-    if (e.key.toLowerCase() === 'n') {
+    // Verificar si el foco está en un campo de texto, input, textarea o select
+    const focusedEl = document.activeElement;
+    const isInput = focusedEl && (focusedEl.tagName === 'INPUT' || focusedEl.tagName === 'TEXTAREA' || focusedEl.tagName === 'SELECT' || focusedEl.isContentEditable);
+    
+    if (e.key === 'Escape' || e.key === 'esc') {
+      // Cerrar modal solo si no estamos en un campo de texto
+      if (!isInput) closeTaskModal();
+    }
+    if (e.key.toLowerCase() === 'n' && !isInput) {
       e.preventDefault();
       // Double-check modal is not already open
       const modal = document.getElementById('taskModal');
@@ -87,7 +94,7 @@ function setupKeyboardShortcuts() {
         openTaskModal();
       }
     }
-    if (e.key === '/') {
+    if (e.key === '/' && !isInput) {
       e.preventDefault();
       const tagFilter = document.getElementById('tagFilter');
       if (tagFilter) tagFilter.focus();
