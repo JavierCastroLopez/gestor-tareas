@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diagnóstico - Creación de Tareas</title>
+  <style>
+    :root {
+      --bg-primary: #121212;
+      --bg-card: #1E1E1E;
+      --text-primary: #EAEAEA;
+      --text-secondary: #8888AA;
+      --accent-primary: #9933FF;
+      --border-muted: #3A3A5A;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      background: var(--bg-primary); 
+      color: var(--text-primary); 
+      font-family: system-ui, sans-serif; 
+      min-height: 100vh; 
+      padding: 20px;
+    }
+    .diagnostic-container { max-width: 800px; margin: 0 auto; }
+    .section { 
+      background: var(--bg-card); 
+      border-radius: 12px; 
+      padding: 24px; 
+      margin-bottom: 20px; 
+      border: 1px solid var(--border-muted);
+    }
+    .section h2 { 
+      color: var(--accent-primary); 
+      margin-bottom: 20px; 
+      display: flex; 
+      align-items: center; 
+      gap: 8px;
+    }
+    .section h2::before { content: "🔍 "; }
+    .debug-log { 
+      background: #0d0d0d; 
+      border: 1px solid var(--border-muted); 
+      border-radius: 8px; 
+      padding: 16px; 
+      overflow-x: auto; 
+      font-family: monospace; 
+      font-size: 12px; 
+      color: #90caf9; 
+      min-height: 150px; 
+      margin-top: 12px;
+    }
+    .debug-log.error { color: #ff5252; }
+    .debug-log.success { color: #4caf50; }
+    .debug-log.warning { color: #ffc107; }
+    .debug-log.info { color: #9933ff; }
+    .btn { 
+      display: inline-block; 
+      padding: 8px 16px; 
+      border: none; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      font-size: 13px; 
+      margin: 5px; 
+      transition: opacity 0.2s;
+    }
+    .btn-primary { background: var(--accent-primary); color: #fff; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-secondary { background: var(--bg-primary); color: var(--text-primary); }
+    .btn-secondary:hover { opacity: 0.9; }
+    .btn-disabled { background: #666; cursor: not-allowed; }
+    .pass { border-left: 3px solid #4caf50; }
+    .fail { border-left: 3px solid #ff5252; }
+  </style>
+</head>
+<body>
+  <div class="diagnostic-container">
+    <h1>🔍 Diagnóstico de Creación de Tareas</h1>
+    <p>Ejecuta esto en la misma pestaña que la aplicación principal</p>
+    
+    <div class="section">
+      <h2>Paso 1: Verificar carga de la aplicación</h2>
+      <div class="debug-log" id="log1"></div>
+    </div>
+
+    <div class="section">
+      <h2>Paso 2: Probar apertura de Modal</h2>
+      <button class="btn btn-primary" id="testOpenModal">Abrir Modal de Tarea</button>
+      <div class="debug-log" id="log2"></div>
+    </div>
+
+    <div class="section">
+      <h2>Paso 3: Probar envío del Formulario</h2>
+      <button class="btn btn-primary" id="testSubmitForm">Simular Envío del Formulario</button>
+      <div class="debug-log" id="log3"></div>
+    </div>
+
+    <div class="section">
+      <h2>Paso 4: Verificar localStorage</h2>
+      <button class="btn btn-primary" id="testLocalStorage">Probar localStorage</button>
+      <div class="debug-log" id="log4"></div>
+    </div>
+
+    <div class="section">
+      <h2>Paso 5: Verificar Estado Actual</h2>
+      <button class="btn btn-primary" id="testCurrentState">Mostrar Estado Actual</button>
+      <div class="debug-log" id="log5"></div>
+    </div>
+
+    <div class="section">
+      <h2>Resultado Final</h2>
+      <div class="debug-log" id="logFinal" style="min-height: 200px;"></div>
+    </div>
+  </div>
+
+  <script>
+    // Inicializar logs
+    function addLog(id, message, type = 'info') {
+      const container = document.getElementById(id);
+      const div = document.createElement('div');
+      const timestamp = new Date().toLocaleTimeString();
+      div.innerHTML = `[${timestamp}] ${message}`;
+      div.className = `debug-log ${type}`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // Limpiar logs previos
+    function clearLogs() {
+      ['log1', 'log2', 'log3', 'log4', 'log5', 'logFinal'].forEach(id => {
+        document.getElementById(id).innerHTML = '';
+      });
+    }
+
+    // Verificar que la app se cargó correctamente
+    document.addEventListener('DOMContentLoaded', () => {
+      addLog('log1', 'DOMContentLoaded ejecutado', 'success');
+      
+      // Verificar elementos críticos
+      const newTaskBtn = document.getElementById('newTaskBtn');
+      const taskForm = document.getElementById('taskForm');
+      const taskTitle = document.getElementById('taskTitle');
+      
+      addLog('log1', 'Elementos encontrados: newTaskBtn=' + (!!newTaskBtn) + ', taskForm=' + !!taskForm + ', taskTitle=' + !!taskTitle, 'info');
+      
+      if (!newTaskBtn || !taskForm || !taskTitle) {
+        addLog('log1', '❌ Elementos críticos faltantes! Revisa index.html', 'error');
+      }
+    });
+
+    // Pase 2: Abrir modal
+    document.getElementById('testOpenModal').addEventListener('click', () => {
+      addLog('log2', 'Botón "Abrir Modal" hecho clic');
+      
+      const modal = document.getElementById('taskModal');
+      if (modal) {
+        addLog('log2', 'Modal encontrado, intentando display:flex');
+        modal.style.display = 'flex';
+        addLog('log2', 'Modal display set a flex', 'success');
+        
+        // Forzar foco
+        setTimeout(() => {
+          const titleInput = document.getElementById('taskTitle');
+          if (titleInput) {
+            addLog('log2', 'Input de título encontrado, enfocándolo');
+            titleInput.focus();
+            addLog('log2', 'Input enfocado exitosamente', 'success');
+          } else {
+            addLog('log2', '❌ Input de título NO encontrado', 'error');
+          }
+        }, 100);
+      } else {
+        addLog('log2', '❌ Modal NO encontrado', 'error');
+      }
+    });
+
+    // Pase 3: Simular envío del formulario
+    document.getElementById('testSubmitForm').addEventListener('click', () => {
+      addLog('log3', 'Simulando envío del formulario...');
+      
+      const form = document.getElementById('taskForm');
+      const titleInput = document.getElementById('taskTitle');
+      
+      if (!form) {
+        addLog('log3', '❌ Formulario no encontrado', 'error');
+        return;
+      }
+      
+      addLog('log3', 'Formulario encontrado, values antes de submit:');
+      addLog('log3', '  - title value: "' + (titleInput ? titleInput.value : 'N/A') + '"', 'info');
+      
+      // Manually simulate what handleTaskSubmit does
+      const title = titleInput ? titleInput.value.trim() : '';
+      addLog('log3', 'Title trim length: ' + title.length, 'info');
+      
+      if (!title) {
+        addLog('log3', '❌ Título vacío, no se crearía la tarea', 'warning');
+        return;
+      }
+      
+      // Simulate task creation
+      const newTask = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2),
+        title: title,
+        description: '',
+        dueDate: null,
+        priority: 'media',
+        tags: [],
+        completed: false,
+        createdAt: new Date().toISOString()
+      };
+      
+      addLog('log3', 'Objeto de tarea creado:', 'success', true);
+      addLog('log3', JSON.stringify(newTask, null, 2), 'info');
+      
+      // Try to save to localStorage
+      try {
+        const data = JSON.stringify(tasks !== undefined ? tasks : []);
+        localStorage.setItem('tasks', JSON.stringify([...(tasks || []), newTask]));
+        addLog('log3', '✅ Tarea guardada en localStorage exitosamente', 'success');
+        
+        // Verificar que se guardó
+        const retrieved = JSON.parse(localStorage.getItem('tasks'));
+        addLog('log3', 'Tareas en localStorage después de guardar: ' + retrieved.length, 'success');
+        addLog('log3', 'Última tarea título: ' + retrieved[retrieved.length - 1].title, 'info');
+      } catch (e) {
+        addLog('log3', '❌ Error guardando localStorage: ' + e.message, 'error');
+      }
+    });
+
+    // Pase 4: Probar localStorage directamente
+    document.getElementById('testLocalStorage').addEventListener('click', () => {
+      addLog('log4', 'Probando localStorage directamente...');
+      
+      try {
+        // Test set
+        localStorage.setItem('test_key', 'test_value');
+        addLog('log4', '✅ localStorage.setItem funcionando', 'success');
+        
+        // Test get
+        const value = localStorage.getItem('test_key');
+        addLog('log4', 'localStorage.getItem result: ' + value, 'info');
+        
+        // Test remove
+        localStorage.removeItem('test_key');
+        addLog('log4', '✅ localStorage.removeItem funcionando', 'success');
+        
+        // Check if localStorage is available
+        const isLocalStorage = typeof Storage !== 'undefined';
+        addLog('log4', 'Storage disponible: ' + isLocalStorage, 'success');
+      } catch (e) {
+        addLog('log4', '❌ localStorage ERROR: ' + e.message, 'error');
+      }
+    });
+
+    // Pase 5: Mostrar estado actual
+    document.getElementById('testCurrentState').addEventListener('click', () => {
+      addLog('log5', 'Estado actual de la aplicación:');
+      
+      const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+      addLog('log5', 'Total de tareas en localStorage: ' + tasks.length, 'info');
+      
+      tasks.forEach((t, i) => {
+        addLog('log5', `Tarea ${i}: id=${t.id.substring(0, 8)}... title="${t.title}" priority=${t.priority} completed=${t.completed}`, 'info');
+      });
+      
+      // Verificar elementos del DOM
+      const taskItems = document.querySelectorAll('.task-item');
+      addLog('log5', 'Elementos .task-item en DOM: ' + taskItems.length, 'info');
+      
+      const modal = document.getElementById('taskModal');
+      addLog('log5', 'Modal display actual: ' + (modal ? modal.style.display : 'null'), 'info');
+    });
+  </script>
+</body>
+</html>
