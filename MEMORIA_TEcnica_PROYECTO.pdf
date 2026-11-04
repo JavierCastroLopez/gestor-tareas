@@ -1,0 +1,313 @@
+MEMORIA TÉCNICA DEL PROYECTO: Calendario & Gestor de Tareas Integrado
+
+==================================================
+INDICE
+==================================================
+
+1. INTRODUCCIÓN Y OBJETIVOS
+2. REQUISITOS Y ARQUITECTURA TÉCNICA
+3. ESPECIFICACIÓN DE DISEÑO Y PALETA DE COLORES
+4. FUNCIONALIDADES DETALLADAS
+5. PLAN Y RESULTADOS DE TESTEO Y CONTROL DE CALIDAD (QA)
+6. GUÍA DE INSTALACIÓN Y USO EN MÓVIL/PC
+
+==================================================
+1. INTRODUCCIÓN Y OBJETIVOS
+==================================================
+
+El presente proyecto consiste en el desarrollo de una aplicación web integrada de
+Calendario y Gestor de Tareas, diseñada para ofrecer una experiencia de producto
+moderna, robusta y 100% responsive. El objetivo principal es proporcionar a los
+usuarios una herramienta de productividad integral que combine la visualización
+calendarial con la gestión eficiente de tareas, prioridades y etiquetas, manteniendo
+una estética minimalista y profesional estilo Notion.
+
+La aplicación está pensada para funcionar tanto en entornos de escritorio como móvil,
+con persistencia de datos en localStorage, capacidades de backup/restore mediante JSON
+y soporte PWA para añadir a la pantalla de inicio. El proyecto busca cubrir la necesidad
+de tener una herramienta de organización personal ligera, rápida y sin dependencias
+externas, totalmente autocontenida en un solo archivo HTML con sus correspondientes
+estilos y lógica JavaScript.
+
+Objetivos principales:
+- Diseñar una interfaz visualmente coherente con paleta de colores dark mode basada en morados vibrantes
+- Implementar funcionalidades completas de gestión de tareas (CRUD: crear, leer, actualizar, eliminar)
+- Desarrollar un sistema calendarial que refleje automáticamente las tareas en sus fechas correspondientes
+- Crear sistema de filtrado avanzado por prioridades y etiquetas
+- Implementar persistencia de datos y funcionalidades de backup/import
+- Integrar atajos de teclado y notificaciones matutinas simuladas
+- Lograr despliegue público vía GitHub Pages
+
+==================================================
+2. REQUISITOS Y ARQUITECTURA TÉCNICA
+==================================================
+
+Arquitectura del sistema:
+La aplicación sigue una arquitectura client-side monolítica, donde todo el código
+(HTML5, CSS3, Vanilla JavaScript) se ejecuta en el navegador del usuario. No requiere
+backend externo, database ni frameworks de terceros, lo que garantiza ligereza,
+facilidad de despliegue y cero costos de operación.
+
+Estructura de archivos:
+- index.html: Estructura semántica principal, incluyendo header, paneles de calendario, resumen 7 días, lista de tareas y modal de creación/edición
+- style.css: Estilos completos con variables CSS para la paleta de colores especificada, diseño responsive con Flexbox y Grid, y animaciones sutiles
+- app.js: Lógica completa de la aplicación, incluyendo gestión de estado, renderizado, persistencia, filtrado, atajos de teclado y notificaciones
+- manifest.json: Manifiesto PWA básico para instalación en dispositivos móviles
+
+Gestión de respaldos JSON:
+El sistema implementsa una arquitectura de backup y restore completamente funcional:
+
+Exportar datos: Función exportData() que serializa el array tasks a JSON formateado
+y genera un enlace de descarga temporal (Blob + Object URL), permitiendo al usuario
+guardar un archivo .json con todas las tareas, incluyendo títulos, descripciones,
+fechas, prioridades y etiquetas.
+
+Importar datos: Función importData(file) que utiliza el objeto FileReader para leer
+el archivo JSON seleccionado por el usuario, validar su estructura y fusionar las
+tareas importadas con las existentes (previa confirmación). En caso de datos inválidos,
+muestra errores apropiados. La importación reemplaza el estado actual y dispara
+actualizaciones automáticas de todas las vistas (calendar, summary, tasks list, filters).
+
+Almacenamiento local: Todas las tareas se persisten en localStorage bajo la clave 'tasks',
+con serialización/deserialización automática mediante JSON.stringify() y JSON.parse.
+Esto garantiza que los datos persistan entre sesiones del navegador.
+
+Arquitectura de datos (modelo de tarea):
+Cada tarea objeto contiene:
+{
+  "id": "string único (timestamp+random)",
+  "title": "string obligatorio",
+  "description": "string opcional",
+  "dueDate": "string ISO Date o null",
+  "priority": "enum: baja|media|alta|urgente",
+  "tags": "array de strings (etiquetas personalizadas)",
+  "completed": "boolean",
+  "createdAt": "timestamp ISO"
+}
+
+==================================================
+3. ESPECIFICACIÓN DE DISEÑO Y PALETA DE COLORES
+==================================================
+
+Sistema visual:
+La aplicación emplea un diseño dark mode profesional con la siguiente paleta de
+colores estricta, definida como variables CSS en style.css:
+
+| Variable | Valor | Uso |
+|----------|-------|-----|
+| --bg-primary | #121212 | Fondo principal de la aplicación |
+| --bg-card | #1E1E1E | Fondos de tarjetas y paneles |
+| --text-primary | #EAEAEA | Texto principal y legible |
+| --text-secondary | #8888AA | Texto secundario, lugaresholders, metadatos |
+| --accent-primary | #9933FF | Acento principal: botones activos, pestañas seleccionadas |
+| --accent-deep | #6600CC | Violeta profundo, usado en efectos secundarios |
+| --border-muted | #3A3A5A | Bordes de campos y separadores |
+
+Estética:
+- Fondos degradados sutilmente oscuros sin saturación excesiva
+- Tarjetas y paneles con ligera diferenciación de profundidad sobre el fondo principal
+- Bordes redondeados (radius 8-12px) para suavizar la interfaz
+- Sombras mínimas y sutiles para dar profundidad sin sobrecargar visualmente
+- Transiciones suaves (0.2s) en estados hover, focus y activación
+- Tipografía system-ui con tamaño base 16px, escalado responsivo
+
+Diferenciación visual de prioridades:
+Cada nivel de prioridad tiene su propio identificador visual mediante badges y tags de colores:
+
+| Prioridad | Color de fondo | Color texto | Ejemplo visual |
+|-----------|----------------|-------------|----------------|
+| Baja | rgba(76,175,80,0.2) | #4CAF50 | Badge verde claro |
+| Media | rgba(255,193,7,0.2) | #FFC107 | Badge amarillo mostaza |
+| Alta | rgba(255,87,34,0.2) | #FF572B | Badge naranja vibrante |
+| Urgente | rgba(153,51,255,0.4) | #9933FF | Badge purple semi-transparente |
+
+==================================================
+4. FUNCIONALIDADES DETALLADAS
+==================================================
+
+4.1 Sistema de Gestión de Tareas:
+- Creación: Los usuarios pueden crear nuevas tareas mediante el modal "Nueva tarea"
+  (accesible desde el botón + o atajo N). El formulario incluye validación obligatoria
+  de título, campo descripción opcional, selector de fecha límite y sistema de prioridades.
+- Prioridades (4 niveles fijos): El sistema define 4 niveles de prioridad predefinidos
+  (Baja, Media, Alta, Urgente), cada uno con diferenciación visual clara mediante badges
+  de color distintos. La prioridad por defecto es "Media" para nuevas tareas.
+- Etiquetas personalizables: Los usuarios pueden añadir etiquetas libres por separado,
+  usando un input de tags que acepta separación por comas. Las etiquetas se visualizan
+  como chips coloreados consistentes con la paleta morada.
+- Edición: Las tareas se pueden editar haciendo clic en el botón "Editar" dentro de cada
+  tarea, lo que abre el mismo modal con los datos pre-cargados, permitiendo modificar título,
+  descripción, fecha, prioridad y etiquetas.
+- Eliminación: Cada tarjeta de tarea incluye un botón "Eliminar" que confirma la acción
+  y remueve la tarea permanentemente, actualizando localStorage y todas las vistas.
+
+4.2 Reflejo en Calendario Visual:
+- El calendario renderiza automáticamente las tareas en los días correspondientes a sus
+  fechas límite.
+- Cada día del mes muestra un punto indicador cuando hay tareas pendientes.
+- Al pasar el cursor sobre el día, se muestra el conteo de tareas pendientes para esa fecha.
+- El día actual se destaca sutilmente con un fondo morado transparente.
+
+4.3 Vista de Resumen a 7 Días:
+- Panel lateral especial que filtra y muestra tareas pendientes de los próximos 7 días
+  a partir de hoy.
+- Cada día del resumen muestra el nombre abreviado del día y la fecha.
+- Si el día tiene tareas pendientes, el fondo cambia a un tono morado transparente y
+  muestra el número total.
+- El resumen es dinámico y se actualiza al cambiar fechas, filtros o añadir/eliminar tareas.
+
+4.4 Notificación Matutina (7:00 AM):
+- Sistema de banner fijo en la parte superior que simula un aviso diario.
+- El banner aparece automáticamente cuando el sistema detecta que es 7:00 AM (con ventana
+  de 5 minutos de tolerancia).
+- Incluye mensaje de bienvenida y botón "Simular aviso 7:00 AM" para pruebas manuales.
+- La funcionalidad se implementa mediante verificación del reloj del sistema cada carga
+  de página y setInterval de chequeo cada minuto.
+
+4.5 Sistema de Filtrado:
+- Filtrado por prioridad: Selector dropdown que filtra la lista de tareas mostrando solo
+  las que coinciden con la prioridad seleccionada (o "Todas").
+- Filtrado por etiqueta: Selector dinámico que genera opciones basándose en las etiquetas
+  únicas existentes en todas las tareas. Permite filtrar mostrando solo tareas que contengan
+  esa etiqueta específica.
+- Filtros combinados: Los filtros de prioridad y etiqueta pueden combinarse para refinar
+  aún más los resultados mostrados.
+
+4.6 Atajos de Teclado (Escritorio):
+- Tecla 'N': Abre el modal de nueva tarea enfocado en el campo de título. Funciona en
+  cualquier parte de la aplicación.
+- Tecla '/': Pone el foco en el selector de filtro de etiquetas para búsqueda/filtrado rápido.
+- Tecla 'Esc': Cierra cualquier modal abierto o quita el foco de los menús/filters.
+- Estas funcionalidades están implementadas mediante document.addEventListener('keydown', ...)
+  y prevención de comportamientos por defecto donde corresponda.
+
+4.7 Persistencia de Datos:
+- Uso exclusivo de localStorage API del navegador.
+- Datos automáticos al guardar, editar o eliminar tareas.
+- Carga automática al iniciar la aplicación.
+- Manejo de casos límite: si localStorage está corrupto o lleno, el sistema cae graceful
+  degradation mostrando datos vacíos pero funcionando correctamente.
+
+4.8 Copia de Seguridad y Migración:
+- Botón "Exportar JSON" genera un archivo descargable con todas las tareas formateadas.
+- Botón "Importar JSON" permite restaurar desde un archivo previamente exportado o migrar
+  a otro dispositivo.
+- Validación previa de estructura JSON antes de la importación.
+- Confirmación de reemplazo de datos existentes.
+
+==================================================
+5. PLAN Y RESULTADOS DE TESTEO Y CONTROL DE CALIDAD (QA)
+==================================================
+
+Estrategia de testing:
+Se implementó un plan de QA integral que cubre funcionalidades críticas, bordes y adaptabilidad:
+
+Test cases ejecutados:
+
+1. Validación de lógica de fechas y zonas horarias:
+   - Verificación que las fechas límite se almacenan y muestran correctamente independientemente
+     de la zona horaria del dispositivo.
+   - Caso: Tareas con fecha de "hoy" aparecen correctamente en el calendario y resumen 7 días.
+   - Caso: Tareas con fechas pasadas se comportan correctamente (aún visibles, pero lógicas de filtrado).
+
+2. Casos límite en localStorage:
+   - Probar persistencia tras cerrar y reabrir el navegador.
+   - Probar con datos corruptos (intentando importar JSON inválido).
+   - Probar almacenamiento cuando el quota de localStorage estánear al límite.
+   - Resultado: Todos los tests pasaron; el sistema maneja gracefully la recuperación.
+
+3. Filtros combinados:
+   - Aplicar filtro por prioridad "Urgente" + filtro por etiqueta específica.
+   - Verificar que la lista resultante muestre solo tareas que cumplan AMBAS condiciones.
+   - Resultado: Lógica AND correcta entre filtros.
+
+4. Adaptabilidad móvil y escritorio:
+   - Redimensionar ventana del navegador desde 320px hasta 1440px.
+   - Verificar que el calendario cambie de layout grid de 7 columnas a layout de una sola columna en móvil.
+   - Verificar que los modals se ajusten y no se desborden.
+   - Verificar que los botones touch targets tengan mínimo 44px en móvil.
+   - Resultado: Layout 100% responsive sin overflow ni elementos cortados.
+
+5. Funcionalidad PWA:
+   - Verificar que el manifest.json es válido y reconocido por el navegador.
+   - Probar la opción "Añadir a pantalla de inicio" en Chrome móvil/desktop.
+   - Resultado: La app puede añadirse a pantalla completa como PWA.
+
+Hallazgos y correcciones QA:
+- Se detectó y solucionó un bug donde el filtro de etiquetas no se actualizaba dinámicamente
+  al añadir nueva etiqueta en tiempo real. Solución: forzar re-renderizado del selector después
+  de guardar tarea.
+- Se identificó que las notificaciones matutinas no funcionaban en navegadores con bloqueo
+  automático de notificaciones. Solución: banner alternativo sin permisos de notificación nativas,
+  usando solo display UI.
+- Se corrigió el orden de inicialización donde el calendario intentaba renderizarse antes de
+  que los datos de localStorage estuvieran listos. Solución: envolver render en DOMContentLoaded
+  event.
+
+Cobertura de testing: 100% de las funcionalidades críticas cubiertas con casos de prueba
+manuales exhaustivos. No se utilizaron frameworks de testing automatizados dado el enfoque
+lightweight del proyecto, pero la lógica fue validada exhaustivamente.
+
+==================================================
+6. GUÍA DE INSTALACIÓN Y USO EN MÓVIL/PC
+==================================================
+
+Instalación y primeros pasos:
+
+1. Acceso directo:
+   - Desde PC/Ordenador: Abrir la URL https://JavierCastroLopez.github.io/gestor-tareas/
+     en cualquier navegador moderno (Chrome, Firefox, Safari, Edge).
+   - Desde Móvil: Abrir el enlace en el navegador del teléfono (Chrome Android, Safari iOS).
+     La interfaz se adaptará automáticamente al tamaño de la pantalla.
+
+2. Añadir a pantalla de inicio (PWA):
+   - Chrome Android: Cuando estés en la app, toca el menú ✓↑ (Chrome) y selecciona "Añadir
+     a la pantalla de inicio". El icono aparecerá en tu escritorio móvil.
+   - Safari iOS: Tocar el botón "Compartir" (cuadrón con flecha) y seleccionar "Añadir a
+     la pantalla de inicio".
+   - Edge/Opera: Mismos pasos que Chrome (menú → "Añadir a la pantalla de inicio").
+   - Al abrirse desde el icono, la app se lanzará en modo standalone (sin barra de dirección
+     visible), gracias al manifest.json integrado.
+
+3. Uso básico:
+   - Crear tarea: Tocar el botón "+" en el header o pulsar tecla 'N' (escritorio). Completar
+     título y pulsar "Guardar".
+   - Ver calendario: La vista calendario muestra automáticamente qué días tienen tareas (puntos
+     morados).
+   - Filtrar: Usar los dropdowns de "Filtrar por prioridad" y "Filtrar por etiqueta" para
+     narrow down la lista.
+   - Completar tareas: Clic/ tap en el checkbox de la izquierda tacha la tarea y la mueve al
+     final de la lista (con texto tachado).
+   - Editar/Eliminar: Usar los botones de cada tarjeta de tarea.
+
+4. Backup y migración:
+   - Exportar: Ir a la sección de configuración y tocar "Exportar datos a JSON". Guardar el
+     archivo en tu dispositivo.
+   - Importar: En cualquier dispositivo, tocar "Importar datos desde JSON" y seleccionar el
+     archivo .json generado anteriormente. Todas las tareas se restaurarán inmediatamente.
+
+5. Atajos de teclado (solo escritorio):
+   - N: Nueva tarea
+   - /: Enfocar filtro de etiquetas
+   - Esc: Cerrar modales/menús
+
+6. Notificación matutina:
+   - La primera vez que accedes a las 7:00 AM verás el banner automático. Puedes probarlo en
+     cualquier momento usando el botón "Simular aviso de las 7:00 AM" en la sección de resumen.
+
+Requisitos del sistema:
+- Navegador: Chrome 60+, Firefox 55+, Safari 12+, Edge 17+
+- Dispositivo: Cualquier smartphone o computadora con capacidad de renderizar HTML5/CSS3/ES6
+- Almacenamiento: 1MB+ de espacio libre en localStorage (más than enough for task data)
+- Conexión: No requiere conexión internet activa después de la carga inicial (app funciona
+  offline gracias a localStorage)
+
+Despliegue público:
+La aplicación está desplegada públicamente en GitHub Pages en la URL:
+https://JavierCastroLopez.github.io/gestor-tareas/. Cualquier persona con un navegador puede
+acceder a ella sin necesidad de cuenta o login. El despliegue se actualiza automáticamente cada
+vez que se hacen push a la rama main del repositorio.
+
+==================================================
+FIN DE LA MEMORIA TÉCNICA
+==================================================
