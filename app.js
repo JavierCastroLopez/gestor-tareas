@@ -26,31 +26,36 @@ function initApp() {
 }
 
 function setupEventListeners() {
-  // Botón nueva tarea - se re-adge cada vez que el modal se abre
-  const setupNewTaskBtn = () => {
-    const newTaskBtn = document.getElementById('newTaskBtn');
-    if (newTaskBtn) {
-      newTaskBtn.removeEventListener('click', openTaskModal); // Limpiar listener anterior
-      newTaskBtn.addEventListener('click', openTaskModal);
-    } else {
-      console.error('ERROR: newTaskBtn not found');
-    }
-  };
+  // Botón nueva tarea - listener inicial (solo una vez al cargar)
+  const newTaskBtn = document.getElementById('newTaskBtn');
+  if (newTaskBtn) {
+    newTaskBtn.addEventListener('click', openTaskModal);
+  } else {
+    console.error('ERROR: newTaskBtn not found');
+  }
 
-  // Ejecutar setup inicial
-  setupNewTaskBtn();
-
-  // Re-adge cada vez que el modal se abre (por atajo 'N' u otros medios)
-  const modal = document.getElementById('taskModal');
-  if (modal) {
-    modal.addEventListener('afterscriptexecute', setupNewTaskBtn);
-    // También asegurar que el listener se re-adge al cambiar de visibilidad
-    modal.addEventListener('toggle', () => {
-      if (modal.style.display === 'flex') {
-        setupNewTaskBtn();
+  // Atajo 'N' para nueva tarea (solo si no hay foco en inputs)
+  const setupKeyboardShortcuts = () => {
+    document.addEventListener('keydown', (e) => {
+      const focusedEl = document.activeElement;
+      const isInput = focusedEl && (focusedEl.tagName === 'INPUT' || focusedEl.tagName === 'TEXTAREA' || focusedEl.tagName === 'SELECT');
+      
+      if (e.key.toLowerCase() === 'n' && !isInput) {
+        e.preventDefault();
+        openTaskModal();
+      }
+      if (e.key === '/' && !isInput) {
+        e.preventDefault();
+        const tagFilter = document.getElementById('tagFilter');
+        if (tagFilter) tagFilter.focus();
+      }
+      if (e.key === 'Escape' && !isInput) {
+        closeTaskModal();
       }
     });
-  }
+  };
+
+  setupKeyboardShortcuts();
 
   const taskForm = document.getElementById('taskForm');
   if (taskForm) {
